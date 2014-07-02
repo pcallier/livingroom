@@ -1,4 +1,12 @@
 #############################
+#	praatvoicesauceimitator.praat
+#
+# 	Original script by Chad Vicenik
+# 	Harmonic amplitude corrections h/t Iseli (from VoiceSauce codebase)
+# 	Other modifications Patrick Callier
+#
+
+#############################
 #
 #  This script goes through all the sound files in a directory
 #  and makes several measurements relevant to phonation.
@@ -7,17 +15,18 @@
 #  H1-H2, H1-A1, H1-A2 and H1-A3.  It makes these measure-
 #  ments at different portions of the interval, based on the 
 #  amount of chunking specified.  To do this, it must measure
-#  f0 and the locations of the first three formants.  If Praat
-#  cannot find f0 or all three formants, the file is skipped.
+#  f0 and the locations of the first three formants. 
 #
 #  This script is based off of a similar script by Bert Remijsen.
 #
 #  It is similar to the measurements done by VoiceSauce, 
 #  developed at UCLA.
-#	[PC: modified to output results  in a table with one measurement point per line]
-#   [Added in corrected harmonic measurements. Corrected H1, H2
-#    A1, A2, and A3 for F1, F2, and F3; Added CPP and CPPS (smoothed CPP)]
-#	[Added an option to include information in other tiers]
+#	[PC: modified to output results  in a long-format table, with one measurement point per line]
+#   [PC: Added in corrected harmonic measurements. Corrected H1, H2
+#    A1, A2, and A3 for F1, F2, and F3; Added CPP and CPPS (smoothed CPP), 2k, 5k,
+#	 HNR, HNR05, HNR10, HNR15]	
+#	[PC: added Intensity, "fallback" F0 object, exclusion of labels matching skip_these_re$]
+#	[PC: recording frequencies of harmonic peaks.]
 #
 #############################
 
@@ -32,17 +41,16 @@ form Calculate F1, F2, and intensity-related measurements for a specific segment
 
    comment Analyze which tier in the TextGrid:
    integer the_tier 1
-	comment Include label from which other tier? (0 for none)
-   boolean Include_other_tiers 1
+#	comment Include label from which other tier? (0 for none)
+#   boolean Include_other_tiers 1
 	# padding that we can skip analyzing (but use for making windows)
 	# make sure this is the same as the setting in save_labeled_intervals...
 	positive padding 0.025
 
-	# the 0.025s window is too short for analysis of low pitch. what if we increased it to
-	# 0.06s for pitch analysis?
    positive window_length 0.025
    positive timestep 0.010
-#   positive f0_window 0.06
+   comment Skip sounds longer than (secs):
+   positive max_length 10
 	choice Speaker_sex: 2
 		button male
 		button female
@@ -64,8 +72,8 @@ right_Transition_cost=1
 
 sample_rate=16000
 
+# Intervals on the_tier whose labels match this regex will be skipped
 skip_these_re$ = "^\{..\}|sp|lg|br|sl|[TPSJFGDHKZCVB]H?$"
-max_length = 10
 
 clearinfo 
 
@@ -87,23 +95,23 @@ endif
 # (remember to edit this if you add or change the analyses!)
 
 titleline$ = "Filename	Segment label	Segment start	Segment end	Measure	Value	Chunk	Window_start	Window_end"
-if include_other_tiers <> 0
-	# open a random textgrid--they should all have the same tier structure
-	Randomize
-	random_name$ = Get string: 1
-	Read from file... 'sound_directory$''random_name$'
-	random_soundname$ = selected$ ("Sound", 1)
-	random_gridfile$ = "'textGrid_directory$''random_soundname$''textGrid_file_extension$'"
-	Read from file: random_gridfile$
-	ntiers = Get number of tiers
-	for tier_i from 1 to ntiers
-		is_interval = Is interval tier: tier_i
-		if tier_i <> the_tier and is_interval <> 0
-			tier_name$ = Get tier name: tier_i
-			titleline$ = titleline$ + "	'tier_name$'	start_'tier_i'	end_'tier_i'"
-		endif
-	endfor
-endif
+#if include_other_tiers <> 0
+#	# open a random textgrid--they should all have the same tier structure
+#	Randomize
+#	random_name$ = Get string: 1
+#	Read from file... 'sound_directory$''random_name$'
+#	random_soundname$ = selected$ ("Sound", 1)
+#	random_gridfile$ = "'textGrid_directory$''random_soundname$''textGrid_file_extension$'"
+#	Read from file: random_gridfile$
+#	ntiers = Get number of tiers
+#	for tier_i from 1 to ntiers
+#		is_interval = Is interval tier: tier_i
+#		if tier_i <> the_tier and is_interval <> 0
+#			tier_name$ = Get tier name: tier_i
+#			titleline$ = titleline$ + "	'tier_name$'"
+#		endif
+#	endfor
+#endif
 fileappend "'resultfile$'" 'titleline$'
 titleline$ = "'newline$'"
 fileappend "'resultfile$'" 'newline$'
@@ -119,6 +127,7 @@ for ifile to numberOfFiles
 	Read from file... 'sound_directory$''name$'
 	soundname$ = selected$ ("Sound", 1)
 	sound = selected("Sound")
+	# exceptionally long sounds are usually mistakes and can clog up the works, skip them
 	dur = Get total duration
 	if dur < max_length
 		# set maximum frequency of Formant calculation algorithm on basis of sex
@@ -183,6 +192,16 @@ for ifile to numberOfFiles
 		Interpolate
 		Rename: "'name$'_f0_fallback"
 		pitch_fallback = selected("Pitch")
+
+		select pitch
+		min_f0 = Get minimum
+		if min_f0 = undefined
+			min_f0 = pitchrange_min
+		endif
+		select sound
+		To Intensity: min_f0, 0
+		intensity = selected("Intensity")
+
 		select sound
 		To Harmonicity (cc): timestep, 50, 0.1, 1.0
 		hnr = selected ("Harmonicity")
@@ -229,21 +248,21 @@ for ifile to numberOfFiles
 				label_int = Get interval at time: the_tier, n_md
 				labelx$ = Get label of interval: the_tier, label_int
 				labelother$ = ""
-				if include_other_tiers <> 0
-					n_tiers = Get number of tiers
-					for tier_i from 1 to n_tiers
-						is_interval = Is interval tier: tier_i
-						if tier_i <> the_tier and is_interval <> 0
-							label_int = Get interval at time: tier_i, n_md
-							label_a = Get start point: tier_i, label_int
-							label_b = Get end point: tier_i, label_int
-							label_text$ = Get label of interval: tier_i, label_int
-							label_text$ = replace_regex$ (label_text$, """|''", "", 0)
-							#printline 'labelother$'
-							labelother$ = labelother$ + "	'label_text$'	'label_a'	'label_b'"
-						endif
-					endfor
-				endif
+#				if include_other_tiers <> 0
+#					n_tiers = Get number of tiers
+#					for tier_i from 1 to n_tiers
+#						is_interval = Is interval tier: tier_i
+#						if tier_i <> the_tier and is_interval <> 0
+#							label_int = Get interval at time: tier_i, n_md
+#							#label_a = Get start point: tier_i, label_int
+#							#label_b = Get end point: tier_i, label_int
+#							label_text$ = Get label of interval: tier_i, label_int
+#							label_text$ = replace_regex$ (label_text$, """|''", "", 0)
+#							#printline 'labelother$'
+#							labelother$ = labelother$ + "	'label_text$'"
+#						endif
+#					endfor
+#				endif
 
 				if index_regex (labelx$, skip_these_re$) = 0 
 					# Get the f1,f2,f3 measurements.
@@ -338,12 +357,22 @@ for ifile to numberOfFiles
 							a3db = undefined         
 							h1c = undefined
 							h2c = undefined
+							a1hz = undefined                                                        
+							a2hz = undefined                                                        
+							a3hz = undefined         
+							h1hz = undefined
+							h2hz = undefined
 							a1c = undefined                                                        
 							a2c = undefined                                                        
 							a3c = undefined
 						endif		
 					else
-						a1db = undefined                                                        
+						a1hz = undefined                                                        
+						a2hz = undefined                                                        
+						a3hz = undefined         
+						h1hz = undefined
+						h2hz = undefined
+						a1hz = undefined                                                        
 						a2db = undefined                                                        
 						a3db = undefined         
 						h1c = undefined
@@ -384,6 +413,9 @@ for ifile to numberOfFiles
 					hnr15db = Get value at time: n_md, "Cubic"
 					select hnr25
 					hnr25db = Get value at time: n_md, "Cubic"
+					
+					# get intensity
+					
 			
 					resultline$ = "'soundname$'	'labelx$'	'n_b'	'n_e'	F0	'n_f0md'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	F1	'f1hzpt'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
@@ -394,6 +426,11 @@ for ifile to numberOfFiles
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A1	'a1db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A2	'a2db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A3	'a3db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H1hz	'h1hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H2hz	'h2hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A1hz	'a1hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A2hz	'a2hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A3hz	'a3hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H1c	'h1c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H2c	'h2c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A1c	'a1c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"

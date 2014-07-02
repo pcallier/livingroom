@@ -14,13 +14,13 @@
 
 form Save intervals to small WAV sound files
 	comment Input files
-	sentence Soundfile /Users/patrickcallier/Dropbox/ongoing/postdoc/livingroom/audio/20140512_007M-008F_INT10_FAM_CHA.wav
-	sentence Tg_file /Volumes/Surfer-1/BigBrother/data/annotations/20140512_007M-008F_INT10_FAM_CHA.TextGrid
+	sentence Soundfile 
+	sentence Tg_file 
 	comment Your working folder, where files will be saved:
-	sentence Wav_folder /afs/ir.stanford.edu/users/p/c/pcallier/private/working/creaking
+	sentence Wav_folder 
 	boolean Exclude_empty_labels 1
 	boolean Exclude_intervals_labeled_as_xxx 0
-	boolean Exclude_intervals_starting_with_dot_(.) 1
+	boolean Exclude_intervals_starting_with_dot_(.) 0
 	comment Segment on which tier?
 	integer Which_tier 1
 	boolean Use_labels 1
@@ -136,9 +136,9 @@ for interval from 1 to nrows
 			filename$ = "_" + "'intervalstartms'"
 		endif
 		intervalfile$ = "'wav_folder$'" + "/" + "'prefix$'" + "'filename$'" + "'suffix$'" + ".wav"
-		Write to WAV file... 'intervalfile$'
+		nowarn Write to WAV file... 'intervalfile$'
 
-		To TextGrid... label 
+#		To TextGrid... label 
 		select phone_tg
 		Extract part: intervalstart, intervalend, 0
 		tgfile$ = "'wav_folder$'" + "/" + "'prefix$'" + "'filename$'" + "'suffix$'" + ".TextGrid"
@@ -146,9 +146,6 @@ for interval from 1 to nrows
 			Save as chronological text file... 'tgfile$'
 		endif
 		Remove
-		select phone_tg
-		Remove
-
 		select sound_part
 		Remove
 		select sound_part_resampled
@@ -159,4 +156,8 @@ for interval from 1 to nrows
 
 	endif
 endfor
+
+select phone_tg
+Remove
+
 printline Done.
