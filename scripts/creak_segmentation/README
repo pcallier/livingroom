@@ -1,0 +1,6 @@
+This folder contains what you need to do creak detection. See the lab handbook for
+instructions. do_creak_detection.m calls on some routines in covarep, so you need to have 
+covarep on your system and have already run the startup script in this session.
+do_creak_detection.m calls creak_tg.m, which is just utility functionality.
+add_creak_info_to_tg.praat takes the output of do_creak_detection.m and adds it to a 
+single TG which is expected to have certain characteristics (see the script).
