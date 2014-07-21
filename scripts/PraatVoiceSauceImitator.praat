@@ -33,16 +33,15 @@
 form Calculate F1, F2, and intensity-related measurements for a specific segment
 	comment See header of script for details. 
 	sentence Speaker SashaP
-	sentence sound_directory /afs/ir.stanford.edu/users/p/c/pcallier/private/working/creaking/
+	sentence sound_directory 
 	sentence Sound_file_extension .wav
-	text textGrid_directory /afs/ir.stanford.edu/users/p/c/pcallier/private/working/creaking/
+	text textGrid_directory 
 	sentence TextGrid_file_extension .TextGrid
-	sentence results_dir /Users/patrickcallier/Dropbox/ongoing/postdoc/livingroom/work/
-
+	sentence results_dir 
+	
    comment Analyze which tier in the TextGrid:
    integer the_tier 1
-#	comment Include label from which other tier? (0 for none)
-#   boolean Include_other_tiers 1
+
 	# padding that we can skip analyzing (but use for making windows)
 	# make sure this is the same as the setting in save_labeled_intervals...
 	positive padding 0.025
@@ -78,6 +77,12 @@ skip_these_re$ = "^\{..\}|sp|lg|br|sl|[TPSJFGDHKZCVB]H?$"
 clearinfo 
 
 resultfile$ = results_dir$ + speaker$ + "_pitchresults.txt"
+
+# clean up directory names, making sure they end in /
+sound_directory$ = replace_regex$(sound_directory$, "/*$", "/", 0) 
+textGrid_directory$ = replace_regex$(textGrid_directory$, "/*$", "/", 0) 
+results_dir$  = replace_regex$(results_dir$, "/*$", "/", 0) 
+
 
 # Here, you make a listing of all the sound files in a directory.
 # The example gets file names ending with ".wav" from D:\tmp\
@@ -313,10 +318,14 @@ for ifile to numberOfFiles
 						upperbh1 = 'n_f0md' + 'p10_nf0md'
 						lowerbh2 = ('n_f0md' * 2) - ('p10_nf0md' * 2)
 						upperbh2 = ('n_f0md' * 2) + ('p10_nf0md' * 2)
+						lowerbh4 = ('n_f0md' * 4) - ('p10_nf0md' * 2)
+						upperbh4 = ('n_f0md' * 4) + ('p10_nf0md' * 2)
 						h1db = Get maximum... 'lowerbh1' 'upperbh1' None
 						h1hz = Get frequency of maximum... 'lowerbh1' 'upperbh1' None
 						h2db = Get maximum... 'lowerbh2' 'upperbh2' None
 						h2hz = Get frequency of maximum... 'lowerbh2' 'upperbh2' None
+						h4db = Get maximum... 'lowerbh4' 'upperbh4' None
+						h4hz = Get frequency of maximum... 'lowerbh4' 'upperbh4' None
 						rh1hz = round('h1hz')
 						rh2hz = round('h2hz')
 				
@@ -338,13 +347,45 @@ for ifile to numberOfFiles
 							a2hz = Get frequency of maximum... 'lowerba2' 'upperba2' None
 							a3db = Get maximum... 'lowerba3' 'upperba3' None
 							a3hz = Get frequency of maximum... 'lowerba3' 'upperba3' None
-					
-
+							
+							# calculate p0. this is an unpublished technique
+							# from rob podesva and pat callier
+							To SpectrumTier (peaks)
+							spctier = selected ("SpectrumTier")
+							Down to Table
+							specpeaks = selected ("Table")
+							Extract rows where column (number): "freq(Hz)", "greater than or equal to", 200
+							specpeaks2 = selected ("Table")
+							Extract rows where column (number): "freq(Hz)", "less than or equal to", 300
+							specpeaks3 = selected ("Table")
+							specpeaks_n = Get number of rows
+							if specpeaks_n = 1
+								p0db = Get value: 1, "pow(dB/Hz)"
+								p0hz = Get value: 1, "freq(Hz)"
+							elsif specpeaks_n = 2
+								if n_f0md > 200
+									p0db = Get value: 1, "pow(dB/Hz)"
+									p0hz = Get value: 1, "freq(Hz)"
+								else
+									p0db = Get value: 2, "pow(dB/Hz)"
+									p0hz = Get value: 2, "freq(Hz)"
+								endif
+							else
+								if n_f0md > 200
+									p0db = h1db
+									p0hz = h1hz
+								else
+									p0db = h2db
+									p0hz = h2hz
+								endif
+							endif
 							# calculate corrected values rel to F1-3
 							@correct_iseli (h1db, h1hz, f1hzpt, f1bw, f2hzpt, f2bw, f3hzpt, f3bw, sample_rate)
 							h1c = correct_iseli.result
 							@correct_iseli (h2db, h2hz, f1hzpt, f1bw, f2hzpt, f2bw, f3hzpt, f3bw, sample_rate)
 							h2c = correct_iseli.result
+							@correct_iseli (h4db, h4hz, f1hzpt, f1bw, f2hzpt, f2bw, f3hzpt, f3bw, sample_rate)
+							h4c = correct_iseli.result
 							@correct_iseli (a1db, a1hz, f1hzpt, f1bw, f2hzpt, f2bw, f3hzpt, f3bw, sample_rate)
 							a1c = correct_iseli.result
 							@correct_iseli (a2db, a2hz, f1hzpt, f1bw, f2hzpt, f2bw, f3hzpt, f3bw, sample_rate)
@@ -365,7 +406,9 @@ for ifile to numberOfFiles
 							a1c = undefined                                                        
 							a2c = undefined                                                        
 							a3c = undefined
-						endif		
+							p0db = undefined
+							p0hz = undefined						
+						endif		# if f1 and f2 not defined
 					else
 						a1hz = undefined                                                        
 						a2hz = undefined                                                        
@@ -381,7 +424,9 @@ for ifile to numberOfFiles
 						a2c = undefined                                                        
 						a3c = undefined
 						h1db = undefined
-						h2db = undefined						
+						h2db = undefined
+						p0db = undefined
+						p0hz = undefined						
 					endif  # if n_f0md not undefined
 
 					# cepstral peak prominence measures
@@ -415,24 +460,29 @@ for ifile to numberOfFiles
 					hnr25db = Get value at time: n_md, "Cubic"
 					
 					# get intensity
+					select intensity
+					intdb = Get value at time: n_md, "Cubic"
 					
-			
+
+					
 					resultline$ = "'soundname$'	'labelx$'	'n_b'	'n_e'	F0	'n_f0md'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	F1	'f1hzpt'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	F2	'f2hzpt'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	F3	'f3hzpt'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H1	'h1db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H2	'h2db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H4	'h4db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A1	'a1db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A2	'a2db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A3	'a3db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H1hz	'h1hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H2hz	'h2hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
-					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A1hz	'a1hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H4hz	'h4hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newlin					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A1hz	'a1hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A2hz	'a2hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A3hz	'a3hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H1c	'h1c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H2c	'h2c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H4c	'h4c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A1c	'a1c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A2c	'a2c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A3c	'a3c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
@@ -445,6 +495,9 @@ for ifile to numberOfFiles
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	HNR25	'hnr25db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	2k	'twokdb'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	5k	'fivekdb'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	intensity	'intdb'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	p0db	'p0db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	p0hz	'p0hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					fileappend "'resultfile$'" 'resultline$'
 				endif	# if label doesn't match skip_these_re regex
 			endfor		# kounting over chunks
