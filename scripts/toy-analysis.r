@@ -6,6 +6,7 @@ library(ggplot2)
 library(lme4)
 library(lmerTest)
 
+args <- commandArgs(trailingOnly = TRUE)
 
 base.dir <- "/Users/patrickcallier/Dropbox/ongoing/postdoc/livingroom"
 data.df <- read.delim(file.path(base.dir, "work", "test_output.txt"), na.strings="--undefined--")

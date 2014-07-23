@@ -6,12 +6,17 @@
 # 
 # Output is an even bigger table file with a whole bunch of crap in it.
 #
+# FRAGILE: Assumes (though you may change these parameters) that phones are tier 1,
+# words are tier 2, lines/utterances/IPs are tier 3, creak is tier 4
+#
+# See also comment in form...endform block below about userinforecord_id field
+#
 # Patrick Callier
 #
 
 form Decorate measurements with extra data
 	sentence measurements_path /Users/patrickcallier/Dropbox/ongoing/postdoc/livingroom/work/SashaP_pitchresults.txt
-	sentence textgrid_path /Volumes/Surfer-1/BigBrother/data/annotations/20140512_007M-008F_INT10_FAM_CHA.TextGrid
+	sentence textgrid_path /Users/patrickcallier/Dropbox/ongoing/postdoc/livingroom/work/20140512_007M-008F_INT10_FAM_CHA.TextGrid
 	sentence survey_path /Users/patrickcallier/Dropbox/ongoing/postdoc/livingroom/data/responses-all.tsv
 	# by design, speakers may have multiple records in the survey results file
 	# for purposes of this script, you have to pick one. if you 
@@ -21,7 +26,35 @@ form Decorate measurements with extra data
 	sentence which_userinforecord_id 5757487680585728
 	
 	sentence output_path /Users/patrickcallier/Dropbox/ongoing/postdoc/livingroom/work/test_output.txt
+	
 endform
+
+phone_tier = 1
+word_tier = 2
+ip_tier = 3
+creak_tier = 4
+smile_tier = 5
+
+level_'phone_tier'$ = "phone"
+level_'word_tier'$ = "word"
+level_'ip_tier'$ = "ip"
+level_'creak_tier'$ = "creak"
+level_'smile_tier'$ = "smile"
+
+procedure get_segments (word_int)
+	.a = Get start point: word_tier, word_int
+	.b = Get end point: word_tier, word_int
+	.result$ = ""
+	.cur_phone = Get interval at time: phone_tier, .a
+	.phone_a = Get start point: phone_tier, .cur_phone
+	while .phone_a < .b
+		.phone$ = Get label of interval: phone_tier, .cur_phone
+		.result$ = .result$ + " " + .phone$
+		.cur_phone = .cur_phone + 1
+		.phone_a = Get start point: phone_tier, .cur_phone
+	endwhile
+	.result$ = replace_regex$ (.result$, "^\s*(.*)\s*$", "\1", 0)
+endproc
 
 Read Strings from raw text file: measurements_path$
 measurements = selected("Strings")
@@ -47,8 +80,14 @@ ntiers = Get number of tiers
 for tier_i from 1 to ntiers
 	is_interval = Is interval tier: tier_i
 	if is_interval <> 0
-		tier_name$ = Get tier name: tier_i
-		header_line$ = header_line$ + "	'tier_name$'	start_'tier_i'	end_'tier_i'"
+		if tier_i = phone_tier
+			header_line$ = header_line$ + "	preceding_segment	following_segment"
+		endif
+		if tier_i = word_tier
+			header_line$ = header_line$ + "	word_segments"
+		endif
+		tier_name$ = level_'tier_i'$
+		header_line$ = header_line$ + "	'tier_name$'	start_'tier_name$'	end_'tier_name$'"
 	endif
 endfor
 header_line$ = header_line$ + "	user_id	session_id	age	gender	race	sexual_orientation	userinforecord_id	userinforecord_timestamp"
@@ -79,6 +118,28 @@ for line_i from 2 to nmeasures
 			label_text$ = Get label of interval: tier_i, cur_int
 			time_a = Get start point: tier_i, cur_int
 			time_b = Get end point: tier_i, cur_int
+			# get preceding, following phone information
+			if tier_i = phone_tier
+				prev_int = cur_int - 1
+				if prev_int > 0
+					prev_seg$ = Get label of interval: tier_i, prev_int
+				else
+					prev_seg$ = ""
+				endif
+				
+				next_int = cur_int + 1
+				num_ints = Get number of intervals: tier_i
+				if next_int <= num_ints
+					next_seg$ = Get label of interval: tier_i, next_int
+				else
+					next_seg$ = ""
+				endif
+				cur_measure$ = cur_measure$ + tab$ + prev_seg$ + tab$ + next_seg$
+			endif	# if tier_i = phone_tier
+			if tier_i = word_tier
+				@get_segments(cur_int)
+				cur_measure$ = cur_measure$ + tab$ + get_segments.result$
+			endif
 			cur_measure$ = cur_measure$ + tab$ + label_text$ + tab$ + string$ (time_a) + tab$ + string$ (time_b)
 		endif
 	endfor
@@ -104,3 +165,4 @@ endfor
 
 select measurements
 Save as raw text file: output_path$
+
