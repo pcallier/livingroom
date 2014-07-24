@@ -23,6 +23,7 @@ form Save intervals to small WAV sound files
 	boolean Exclude_intervals_starting_with_dot_(.) 0
 	comment Segment on which tier?
 	integer Which_tier 1
+	comment Use TG labels to name results?
 	boolean Use_labels 1
 	boolean Include_textgrids 1
 	

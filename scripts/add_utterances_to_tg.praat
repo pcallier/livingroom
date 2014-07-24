@@ -6,7 +6,7 @@
 # so we import as strings
 #
 # Output is a TextGrid object with the Utterance timings added. 
-# If overwrite_tg is checked, the tg file given will be overwritten
+# ~~If overwrite_tg is checked, the tg file given will be overwritten~~
 
 form Give me the ELAN export and TG you want to modify
 	sentence Tab_separated_timings /Volumes/Surfer/BigBrother/data/tmp/20140512_007M-008F_INT10_FAM_CHA.txt
@@ -23,6 +23,7 @@ n_lines = Get number of strings
 Read from file: textgrid_to_modify$
 tg = selected("TextGrid")
 n_tiers = Get number of tiers
+end_of_grid = Get end time
 
 Insert interval tier: n_tiers + 1, "Line"
 
@@ -49,7 +50,9 @@ for line_i from 1 to n_lines
 		cur_int = cur_int + 1
 	endif
 	Set interval text: n_tiers+1, cur_int, line_text$
-	Insert boundary: n_tiers + 1, b
+	if b <> end_of_grid
+		Insert boundary: n_tiers + 1, b
+	endif
 endfor
 
 if overwrite_tg = 1
