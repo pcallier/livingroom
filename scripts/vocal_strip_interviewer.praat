@@ -14,7 +14,7 @@ form Give me two paths
 endform
 
 if input_tg$ = output_tg$
-	exitScript: Do not overwrite original TG
+	exitScript: "Do not overwrite original TG"
 endif
 
 Read from file: input_tg$

@@ -1,19 +1,29 @@
-# This is an extremely fragile utility script for adding
+# This is a somewhat fragile utility script for adding
 # the results of do_creak_detection.m (a bunch of TGs)
-# to one master TG, which should be selected.
-# Parameters to change include small_tg_dir$, creak_tier
-# It assumes the originating TextGrid has 3 tiers and that the fourth will
-# be where the creak goes
+# to one master TG, which is specified in the arguments.
+# Parameters to change include small_tg_dir$, creak_tier, original_tg_path
+# It assumes the originating TextGrid has at least creak_tier-1 tiers and will
+# fail if there are any fewer
 
-creak_tier = 4 
+form Add creak detection info to TG
+	comment Where is the TG to be modified?
+	sentence original_tg_path
+	comment Where are the TextGrids from the detection process?
+	sentence small_tg_dir
+	comment On which tier should we record the results?
+	natural creak_tier 4
+endform
+
+Read from file: original_tg_path$
 tg = selected ("TextGrid")
 
 ntiers = Get number of tiers
-if ntiers = 3
+if ntiers = creak_tier - 1
 	Insert interval tier: creak_tier, "creak"
+elsif ntiers < creak_tier - 1
+	exitScript: "Too few tiers"
 endif
 
-small_tg_dir$ = "/afs/ir.stanford.edu/users/p/c/pcallier/private/working/creaking"
 Create Strings as file list: "small_tg_list", "'small_tg_dir$'/*.TextGrid"
 tg_list = selected("Strings")
 
@@ -34,7 +44,7 @@ for tg_i from 1 to n_tgs
 		if int_label$ == "creak"
 			intervalstart = Get start point: 1, int_i
 			intervalend = Get end point: 1, int_i
-			printline Adding at 'offset_ms' + 'intervalstart' and 'intervalend', 'int_label$'
+			#printline Adding at 'offset_ms' + 'intervalstart' and 'intervalend', 'int_label$'
 		
 			select tg
 			boundary_1 = intervalstart + offset_ms / 1000
@@ -60,4 +70,6 @@ for tg_i from 1 to n_tgs
 endfor
 select tg_list
 Remove
-printline Done.
+printline Done adding creak to big TextGrid.
+select tg
+Save as text file: original_tg_path$
