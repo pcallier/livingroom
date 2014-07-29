@@ -18,17 +18,31 @@ STRIPPEDTG=${TGWORKING}/${SPEAKER}.TextGrid
 # this requires ssh authentication to my Stanford account, and for the AFS file
 # system to be mounted. We're working on making this less messy
 # Chop up WAV into bits (phrase-sized)
-/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/save_labeled_intervals_to_wav_sound_files.praat "$BIGWAV" "$STRIPPEDTG" "$WAVWORKINGREMOTE" 1 0 0 2 0 1 0.025 
+/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/save_labeled_intervals_to_wav_sound_files.praat "$BIGWAV" "$STRIPPEDTG" "$WAVWORKINGREMOTE" 1 0 0 3 0 1 0.025 
 # Creak detection
 # copy creak-related scripts to remote (sigh)
 scp -r ${PROJECT_ROOT}/livingroom/scripts/creak_segmentation pcallier@cardinal.stanford.edu:~/private/livingroom-util/
 ssh pcallier@corn.stanford.edu <<ENDSSH
 	sleep 5
 	matlab -r "cd private/covarep; startup; cd ~/private/livingroom-util/creak_segmentation/; do_creak_detection('../wav_working/'); exit"
+	rm -rf ~/private/livingroom-util/creak_segmentation
 ENDSSH
 # decorate big textgrid with creak
 /Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/scripts/creak_segmentation/add_creak_info_to_tg.praat "$STRIPPEDTG" "$WAVWORKINGREMOTE" 4
+# Clean up
+find ${WAVWORKINGREMOTE} -type f -delete
+
+# split again, now for analysis (phone-sized)
+# Praat's deleting takes too long
+find ${WAVWORKING} -type f -delete
+/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/save_labeled_intervals_to_wav_sound_files.praat "$BIGWAV" "$STRIPPEDTG" "$WAVWORKING" 1 0 0 1 1 1 0.025 
+# run analysis script
+if [ $GENDER="male" ]; then
+	GENDERNUMBER=1
+else
+	GENDERNUMBER=2
+fi	
+/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/PraatVoiceSauceImitator.praat "$SPEAKER" "$WAVWORKING" .wav  "$WAVWORKING" .TextGrid "${PROJECT_ROOT}/results" 1 0.025 0.025 0.010 10 "$GENDERNUMBER" 500 550 1485 1650 2475 2750
 
 
-
-#/Applications/Praat.app/Contents/MacOS/Praat /Volumes/Surfer/users/pcallier/livingroom/scripts/save_labeled_intervals_to_wav_sound_files.praat /Users/BigBrother/Documents/VoCal/Retreat_Sample/RED_Fowler_Ginger.wav /Volumes/Surfer/users/pcallier/tgs/RED_Fowler_Ginger.TextGrid /afs/.ir/users/p/c/pcallier/private/livingroom-util/wav_working/ 1 0 0 2 0 1 0.025 
+#/Applications/Praat.app/Contents/MacOS/Praat /Volumes/Surfer/users/pcallier/livingroom/scripts/save_labeled_intervals_to_wav_sound_files.praat /Users/BigBrother/Documents/VoCal/Retreat_Sample/RED_Fowler_Ginger.wav /Volumes/Surfer/users/pcallier/tgs/RED_Fowler_Ginger.TextGrid /Volumes/Surfer/users/pcallier/wavs/ 1 0 0 1 1 1 0.025 
