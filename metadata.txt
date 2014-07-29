@@ -1,0 +1,1 @@
+RED_Fowler_Ginger	female	Redding	00	white	straight	wav_path	tg_path	trs_data_path
