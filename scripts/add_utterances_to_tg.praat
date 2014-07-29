@@ -14,7 +14,9 @@ form Give me the ELAN export and TG you want to modify
 	boolean Overwrite_tg 0
 endform
 
-echo 'overwrite_tg'
+if overwrite_tg=1
+	printline Overwriting input TextGrid...
+endif
 
 Read Strings from raw text file: tab_separated_timings$
 tg_lines = selected("Strings")

@@ -9,7 +9,7 @@
 
 function creak_tg(snd_filename, tg_filename)
 
-[x, fs] = wavread(snd_filename);
+[x, fs] = audioread(snd_filename);
 
 if size(x,1)/fs < 0.100
 	warning(strcat(snd_filename, ' less than 100 ms long'));
@@ -24,8 +24,8 @@ end
 
 [creak_pp,creak_bin] = detect_creaky_voice(x,fs);
 diff_bin = diff([1 creak_bin(:, 1).' 1]);
-start_index = find(diff_bin < 0)
-end_index = find(diff_bin > 0)-1
+start_index = find(diff_bin < 0);
+end_index = find(diff_bin > 0)-1;
 
 stepsize_frames = creak_bin(1,2);
 stepsize_secs = stepsize_frames / fs;

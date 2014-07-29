@@ -161,4 +161,4 @@ endfor
 select phone_tg
 Remove
 
-printline Done.
+printline Done splitting files.
