@@ -42,7 +42,10 @@ if [ $GENDER="male" ]; then
 else
 	GENDERNUMBER=2
 fi	
+# then analyze
 /Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/PraatVoiceSauceImitator.praat "$SPEAKER" "$WAVWORKING" .wav  "$WAVWORKING" .TextGrid "${PROJECT_ROOT}/results" 1 0.025 0.025 0.010 10 "$GENDERNUMBER" 500 550 1485 1650 2475 2750
+# the results end up in the directory we specify with the name SPEAKER_pitchresults.txt
+RESULTS_PATH=${PROJECT_ROOT}/results/${SPEAKER}_pitchresults.txt
 
 
 #/Applications/Praat.app/Contents/MacOS/Praat /Volumes/Surfer/users/pcallier/livingroom/scripts/save_labeled_intervals_to_wav_sound_files.praat /Users/BigBrother/Documents/VoCal/Retreat_Sample/RED_Fowler_Ginger.wav /Volumes/Surfer/users/pcallier/tgs/RED_Fowler_Ginger.TextGrid /Volumes/Surfer/users/pcallier/wavs/ 1 0 0 1 1 1 0.025 
