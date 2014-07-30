@@ -1,1 +1,2 @@
+speaker	gender	location	age	race	sexual_orientation	wav_path	tg_path	trs_data_path
 RED_Fowler_Ginger	female	Redding	00	white	straight	/Users/BigBrother/Documents/VoCal/subsamples/retreat_sample/RED_Fowler_Ginger.wav	/Users/BigBrother/Documents/VoCal/subsamples/retreat_sample/RED_Fowler_Ginger.TextGrid	/Volumes/Surfer/users/pcallier/more/RED_Fowler_Ginger.txt

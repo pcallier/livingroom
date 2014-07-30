@@ -43,13 +43,14 @@ while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SEXUAL_ORIENTATION WAV_PAT
 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}"; exit 1; fi
 	# Creak detection
 	# copy creak-related scripts to remote (sigh)
-	scp -r ${PROJECT_ROOT}/livingroom/scripts/creak_segmentation pcallier@cardinal.stanford.edu:~/private/livingroom-util/
+	scp -r ${PROJECT_ROOT}/livingroom/scripts/creak_segmentation pcallier@corn.stanford.edu:~/private/livingroom-util/
 	if [ $? -ne 0 ]; then echo "scp failed. Line ${LINENO}"; exit 1; fi
 	ssh pcallier@corn.stanford.edu <<ENDSSH
 		sleep 5
 		module load matlab
 		matlab -r "cd private/covarep; startup; cd ~/private/livingroom-util/creak_segmentation/; do_creak_detection('../wav_working/'); exit"
 		rm -rf ~/private/livingroom-util/creak_segmentation
+		logout
 ENDSSH
 	echo `date -u`: "Done with creak segmentation."
 	# need some fancy error checking here

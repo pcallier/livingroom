@@ -35,7 +35,7 @@ form Calculate F1, F2, and intensity-related measurements for a specific segment
 	sentence Speaker SashaP
 	sentence sound_directory 
 	sentence Sound_file_extension .wav
-	text textGrid_directory 
+	sentence textGrid_directory 
 	sentence TextGrid_file_extension .TextGrid
 	sentence results_dir 
 	
@@ -76,12 +76,12 @@ skip_these_re$ = "^\{..\}|sp|lg|br|sl|[TPSJFGDHKZCVB]H?$"
 
 clearinfo 
 
-resultfile$ = results_dir$ + speaker$ + "_pitchresults.txt"
 
 # clean up directory names, making sure they end in /
 sound_directory$ = replace_regex$(sound_directory$, "/*$", "/", 0) 
 textGrid_directory$ = replace_regex$(textGrid_directory$, "/*$", "/", 0) 
 results_dir$  = replace_regex$(results_dir$, "/*$", "/", 0) 
+resultfile$ = results_dir$ + speaker$ + "_pitchresults.txt"
 
 
 # Here, you make a listing of all the sound files in a directory.
@@ -199,13 +199,17 @@ for ifile to numberOfFiles
 		pitch_fallback = selected("Pitch")
 
 		select pitch
-		min_f0 = Get minimum
+		min_f0 = Get minimum: 0, 0, "Hertz", "Parabolic"
 		if min_f0 = undefined
 			min_f0 = pitchrange_min
 		endif
 		select sound
-		To Intensity: min_f0, 0
-		intensity = selected("Intensity")
+		if dur > 6.4 / min_f0
+			To Intensity: min_f0, 0, "yes"
+			intensity = selected("Intensity")
+		else
+			intensity = undefined
+		endif
 
 		select sound
 		To Harmonicity (cc): timestep, 50, 0.1, 1.0
@@ -354,9 +358,9 @@ for ifile to numberOfFiles
 							spctier = selected ("SpectrumTier")
 							Down to Table
 							specpeaks = selected ("Table")
-							Extract rows where column (number): "freq(Hz)", "greater than or equal to", 200
+							nowarn Extract rows where column (number): "freq(Hz)", "greater than or equal to", 200
 							specpeaks2 = selected ("Table")
-							Extract rows where column (number): "freq(Hz)", "less than or equal to", 300
+							nowarn Extract rows where column (number): "freq(Hz)", "less than or equal to", 300
 							specpeaks3 = selected ("Table")
 							specpeaks_n = Get number of rows
 							if specpeaks_n = 1
@@ -460,8 +464,12 @@ for ifile to numberOfFiles
 					hnr25db = Get value at time: n_md, "Cubic"
 					
 					# get intensity
-					select intensity
-					intdb = Get value at time: n_md, "Cubic"
+					if intensity <> undefined
+						select intensity
+						intdb = Get value at time: n_md, "Cubic"
+					else
+						intdb=undefined
+					endif
 					
 
 					
@@ -477,7 +485,8 @@ for ifile to numberOfFiles
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A3	'a3db'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H1hz	'h1hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H2hz	'h2hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
-					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H4hz	'h4hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newlin					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A1hz	'a1hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H4hz	'h4hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
+					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A1hz	'a1hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A2hz	'a2hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	A3hz	'a3hz'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
 					resultline$ = resultline$+ "'soundname$'	'labelx$'	'n_b'	'n_e'	H1c	'h1c'	'kounter'	'spectrum_begin'	'spectrum_end''labelother$''newline$'"
