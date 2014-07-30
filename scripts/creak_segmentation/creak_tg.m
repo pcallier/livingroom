@@ -15,7 +15,7 @@ if size(x,1)/fs < 0.100
 	warning(strcat(snd_filename, ' less than 100 ms long'));
 	return
 else
-	disp(snd_filename)
+	#disp(snd_filename)
 end
 
 if fs ~= 16000
@@ -43,7 +43,7 @@ if size(start_index, 2) > 1
 	% get the start of the grid right
 	endoflast = min_time;
 	if creak_bin(1,1) == 1
-		fprintf(tg_file, '1 %f %f\n"creak"\n\n',  min(min_time,creak_bin(1,2)/fs - stepsize_secs),  creak_bin(start_index(1),2)/fs - stepsize_secs)
+		fprintf(tg_file, '1 %f %f\n"creak"\n\n',  min(min_time,creak_bin(1,2)/fs - stepsize_secs),  creak_bin(start_index(1),2)/fs - stepsize_secs);
 		endoflast = creak_bin(start_index(1),2)/fs - stepsize_secs;
 	end
 	fprintf(tg_file, '1 %f %f\n""\n\n',  endoflast,  creak_bin(end_index(1),2)/fs);
