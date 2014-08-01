@@ -80,7 +80,7 @@ for tier_i from 1 to ntiers
 	endif
 endfor
 # add headers for which metadata fields will be used (change also below)
-header_line$ = header_line$ + "	location	age	gender	race	sexual_orientation"
+header_line$ = header_line$ + "	speaker	location	age	gender	race	sexual_orientation"
 select measurements
 Set string: 1, header_line$
 
@@ -94,19 +94,19 @@ for line_i from 2 to nmeasures
 	# filename in first column
 	timestamp$ = replace_regex$ ( cur_measure$, "^[^\t].*?([0-9]+)\t.*$", "\1", 0 )
 	timestamp = number ( timestamp$ )
-	printline Timestamp: "'timestamp$'"
+#	printline Timestamp: "'timestamp$'"
 
-	# offset in 8th and ninth columns
-	windowstart$ = replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})(.+)\t(.*)$", "\3", 0 )
+	# offset in 6th and 7th columns
+	windowstart$ = replace_regex$ ( cur_measure$, "^((([^\t]*)\t){6}).*?$", "\3", 0 )
 	windowstart = number ( windowstart$ )
-	printline Windowstart: "'windowstart$'"
+#	printline Windowstart: "'windowstart$'"
 
-	windowend$ = replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})(.+)\t(.*)$", "\4", 0 )
+	windowend$ = replace_regex$ ( cur_measure$, "^((([^\t]*)\t){7}).*?$", "\3", 0 )
 	windowend = number (windowend$)
-	printline Windowend: "'windowend$'"
+#	printline Windowend: "'windowend$'"
 
 	timepoint = timestamp / 1000 + windowstart + (windowend-windowstart)/2
-	printline Timepoint: 'timepoint'
+#	printline Timepoint: 'timepoint'
 	
 	cur_measure$ = cur_measure$ + tab$ + string$ (timepoint)
 	select textgrid

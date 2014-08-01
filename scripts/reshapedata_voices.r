@@ -17,23 +17,25 @@ input.path <- args[1]
 output.path <- args[2]
 stopifnot(length(args) >= 2)
 
-data.df <- read.delim(input.path, na.strings="--undefined--", colClasses=c(word_segments="character"))
+data.df <- read.delim(input.path, na.strings="--undefined--", colClasses=c(word_segments="character"), row.names=NULL)
 data.df$speaker_id <- data.df[,"speaker"]
-data.df$phone_id <- with(data.df, paste(speaker_id, session_id, phone, floor(start_phone * 1000), sep="_")
-data.df$word_id <- with(data.df, paste(speaker_id, session_id, word, floor(start_word * 1000), sep="_"))
-data.df$ip_id <- with(data.df, paste(speaker_id, session_id, floor(start_ip * 1000), sep="_"))
-massive.df <- dcast(data.df, ... ~ Measure, value.var="Value")
+data.df$phone_id <- with(data.df, paste(speaker_id, phone, floor(start_phone * 1000), sep="_"))
+data.df$word_id <- with(data.df, paste(speaker_id, word, floor(start_word * 1000), sep="_"))
+data.df$ip_id <- with(data.df, paste(speaker_id, floor(start_ip * 1000), sep="_"))
 
-phone.df <- dcast(massive.df, phone_id + phone + start_phone + word_id + start_word + word_segments + ip_id + start_ip + end_ip~ ., value.var="")
+message("Making phone-level table")
+phone.df <- dcast(data.df, phone_id + phone + start_phone + word_id + start_word + word_segments + ip_id + start_ip + end_ip~ ., value.var="")
+message("Making word-level table")
 word.df <- dcast(phone.df[order(phone.df$start_phone),], word_id + start_word + ip_id + start_ip + end_ip + word_segments ~ "stress_pattern", 
                  value.var="word_segments", fun.aggregate=function(x) { return(gsub("[^012]", "", x[1])) })
 word.df$num_syls <- sapply(word.df$stress_pattern,nchar)
 word.df$word_in_ip <- with(word.df, ave(start_word, ip_id, FUN=rank))
 word.df$word_in_ip_perct <- with(word.df, (start_word-start_ip)/(end_ip-start_ip))
 
-massive.df <- merge(massive.df, subset(word.df, select=c(word_id,num_syls,word_in_ip,word_in_ip_perct,stress_pattern)),by="word_id")
+data.df <- merge(data.df, subset(word.df, select=c(word_id,num_syls,word_in_ip,word_in_ip_perct,stress_pattern)),by="word_id")
 
-ip.df <- ddply(massive.df, .(ip_id), .fun=function(x) { 
+message("Making IP-level table")
+ip.df <- ddply(data.df, .(ip_id), .fun=function(x) { 
   x$F0_max <- max(x$F0,na.rm=TRUE)
   x$F0_min <- min(x$F0,na.rm=TRUE)
   x$F0_median <- median(x$F0,na.rm=TRUE)
@@ -51,4 +53,4 @@ ip.df <- ddply(massive.df, .(ip_id), .fun=function(x) {
 })
 
 # TODO: word frequency, PVI
-write.table(massive.df, file=output.path, row.names=FALSE, sep="\t")
+write.table(data.df, file=output.path, row.names=FALSE, sep="\t")
