@@ -103,9 +103,13 @@ for line_i from 2 to nmeasures
 	# go back and do it again!
 	# filename in first column
 	timestamp = number ( replace_regex$ ( cur_measure$, "^[^\t].*?([0-9]+)\t.*$", "\1", 0 ))
+
 	# offset in 8th and ninth columns
-	windowstart = number ( replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})([0-9.]+)\t.*$", "\3", 0 ))
-	windowend = number ( replace_regex$ ( cur_measure$, "^(([^\t]*\t){8})([0-9.]+)\t.*$", "\3", 0 ))
+	windowstart$ = replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})(.+)\t(.*)$", "\3", 0 )
+	windowstart = number ( windowstart$ )
+	windowend$ = replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})(.+)\t(.*)$", "\4", 0 )
+	windowend = number (windowend$)
+
 	timepoint = timestamp / 1000 + windowstart + (windowend-windowstart)/2
 	
 	cur_measure$ = cur_measure$ + tab$ + string$ (timepoint)

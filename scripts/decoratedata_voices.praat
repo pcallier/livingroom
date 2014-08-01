@@ -17,6 +17,7 @@ form Decorate VoC measurements with extra data
 	sentence textgrid_path
 	sentence metadata_path 	
 	sentence output_path 
+	sentence speaker
 endform
 
 phone_tier = 1
@@ -91,11 +92,21 @@ for line_i from 2 to nmeasures
 	# the only absolute time key is in the filename, so if you didn't have time (ms) in the filename,
 	# go back and do it again!
 	# filename in first column
-	timestamp = number ( replace_regex$ ( cur_measure$, "^[^\t].*?([0-9]+)\t.*$", "\1", 0 ))
+	timestamp$ = replace_regex$ ( cur_measure$, "^[^\t].*?([0-9]+)\t.*$", "\1", 0 )
+	timestamp = number ( timestamp$ )
+	printline Timestamp: "'timestamp$'"
+
 	# offset in 8th and ninth columns
-	windowstart = number ( replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})([0-9.]+)\t.*$", "\3", 0 ))
-	windowend = number ( replace_regex$ ( cur_measure$, "^(([^\t]*\t){8})([0-9.]+)\t.*$", "\3", 0 ))
+	windowstart$ = replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})(.+)\t(.*)$", "\3", 0 )
+	windowstart = number ( windowstart$ )
+	printline Windowstart: "'windowstart$'"
+
+	windowend$ = replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})(.+)\t(.*)$", "\4", 0 )
+	windowend = number (windowend$)
+	printline Windowend: "'windowend$'"
+
 	timepoint = timestamp / 1000 + windowstart + (windowend-windowstart)/2
+	printline Timepoint: 'timepoint'
 	
 	cur_measure$ = cur_measure$ + tab$ + string$ (timepoint)
 	select textgrid
@@ -136,8 +147,9 @@ for line_i from 2 to nmeasures
 	# and survey data
 	select survey
 	Rename... r
-	which_line = Search column: "userinforecord_id", which_userinforecord_id$
+	which_line = Search column: "speaker", speaker$
 	survey_line$ = ""
+	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "speaker"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "location"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "age"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "gender"]

@@ -18,8 +18,8 @@ output.path <- args[2]
 stopifnot(length(args) >= 2)
 
 data.df <- read.delim(input.path, na.strings="--undefined--", colClasses=c(word_segments="character"))
-data.df$speaker_id <- data.df$speaker
-data.df$phone_id <- paste(data.df$speaker_id, data.df$session_id, data.df$phone, floor(data.df$start_phone * 1000), sep="_")
+data.df$speaker_id <- data.df[,"speaker"]
+data.df$phone_id <- with(data.df, paste(speaker_id, session_id, phone, floor(start_phone * 1000), sep="_")
 data.df$word_id <- with(data.df, paste(speaker_id, session_id, word, floor(start_word * 1000), sep="_"))
 data.df$ip_id <- with(data.df, paste(speaker_id, session_id, floor(start_ip * 1000), sep="_"))
 massive.df <- dcast(data.df, ... ~ Measure, value.var="Value")
