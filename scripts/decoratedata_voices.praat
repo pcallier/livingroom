@@ -92,7 +92,7 @@ for line_i from 2 to nmeasures
 	# the only absolute time key is in the filename, so if you didn't have time (ms) in the filename,
 	# go back and do it again!
 	# filename in first column
-	timestamp$ = replace_regex$ ( cur_measure$, "^[^\t].*?([0-9]+)\t.*$", "\1", 0 )
+	timestamp$ = replace_regex$ ( cur_measure$, "^[^\t_]*_([0-9]+).*?$", "\1", 0 )
 	timestamp = number ( timestamp$ )
 #	printline Timestamp: "'timestamp$'"
 
@@ -115,6 +115,7 @@ for line_i from 2 to nmeasures
 		is_interval = Is interval tier: tier_i
 		if is_interval <> 0
 			cur_int = Get interval at time: tier_i, timepoint
+#			printline Current interval: 'tier_i'/'cur_int'
 			label_text$ = Get label of interval: tier_i, cur_int
 			time_a = Get start point: tier_i, cur_int
 			time_b = Get end point: tier_i, cur_int
@@ -134,12 +135,17 @@ for line_i from 2 to nmeasures
 				else
 					next_seg$ = ""
 				endif
+				# Add previous and following segment information to output
 				cur_measure$ = cur_measure$ + tab$ + prev_seg$ + tab$ + next_seg$
 			endif	# if tier_i = phone_tier
 			if tier_i = word_tier
 				@get_segments(cur_int)
+				# add segmental spelling to the output
 				cur_measure$ = cur_measure$ + tab$ + get_segments.result$
 			endif
+			# add generic information from this tier to output, after applying a lame filter
+			label_text$ = replace_regex$(label_text$, "[\n\t\s]+", " ", 0)
+			label_text$ = replace_regex$(label_text$, "[""']", "\\&", 0)
 			cur_measure$ = cur_measure$ + tab$ + label_text$ + tab$ + string$ (time_a) + tab$ + string$ (time_b)
 		endif
 	endfor

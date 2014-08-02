@@ -82,11 +82,11 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
 	#rscript ${PROJECT_ROOT}/livingroom/scripts/long_to_wide.r "$MEASUREMENTS_PATH" "$MEASUREMENTS_WIDE_PATH"
 	#if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}"; exit 1; fi
 	echo `date -u`: "Adding extra information from text grid..."
-	#/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/scripts/decoratedata_voices.praat "${MEASUREMENTS_WIDE_PATH}" "${STRIPPEDTG}" "${METADATA_PATH}" "${MEASUREMENTS_DECORATED_PATH}" "${SPEAKER}"
+	/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/scripts/decoratedata_voices.praat "${MEASUREMENTS_WIDE_PATH}" "${STRIPPEDTG}" "${METADATA_PATH}" "${MEASUREMENTS_DECORATED_PATH}" "${SPEAKER}"
 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}"; exit 1; fi
 	echo `date -u`: "Adding extra niceties (almost done)..."
-	rscript ${PROJECT_ROOT}/livingroom/scripts/reshapedata_voices.r "$MEASUREMENTS_DECORATED_PATH" "$MEASUREMENTS_RESHAPED_PATH"
-	if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}"; exit 1; fi
+	#rscript ${PROJECT_ROOT}/livingroom/scripts/reshapedata_voices.r "$MEASUREMENTS_DECORATED_PATH" "$MEASUREMENTS_RESHAPED_PATH"
+	#if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}"; exit 1; fi
 	echo `date -u`: "Done with $SPEAKER."
 done
 
