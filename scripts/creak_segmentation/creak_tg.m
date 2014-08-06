@@ -15,7 +15,7 @@ if size(x,1)/fs < 0.100
 	warning(strcat(snd_filename, ' less than 100 ms long'));
 	return
 else
-	#disp(snd_filename)
+%	disp(snd_filename)
 end
 
 if fs ~= 16000

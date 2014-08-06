@@ -8,9 +8,6 @@
 
 library(reshape2)
 library(plyr)
-library(ggplot2)
-library(lme4)
-library(lmerTest)
 
 args <- commandArgs(trailingOnly = TRUE)
 input.path <- args[1]
@@ -55,4 +52,5 @@ ip.df <- ddply(data.df, .(ip_id), .fun=function(x) {
 })
 
 # TODO: word frequency, PVI
+message("Saving result")
 write.table(data.df, file=output.path, row.names=FALSE, sep="\t", quote=FALSE)
