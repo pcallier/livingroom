@@ -7,6 +7,9 @@
 #
 # Output is a TextGrid object with the Utterance timings added. 
 # ~~If overwrite_tg is checked, the tg file given will be overwritten~~
+#
+# The input file should be tab-delimited and have the beginning time in the third column,
+# ending time in the fourth column, text in the fifth
 
 form Give me the ELAN export and TG you want to modify
 	sentence Tab_separated_timings /Volumes/Surfer/BigBrother/data/tmp/20140512_007M-008F_INT10_FAM_CHA.txt
@@ -45,7 +48,7 @@ for line_i from 1 to n_lines
 	
 	if a <> undefined
 		# normal insertion
-		Insert boundary: n_tiers + 1, a
+		nocheck Insert boundary: n_tiers + 1, a
 		cur_int = Get interval at time: n_tiers + 1, a
 	else
 		# no need to add an extra boundary
@@ -53,7 +56,7 @@ for line_i from 1 to n_lines
 	endif
 	Set interval text: n_tiers+1, cur_int, line_text$
 	if b <> end_of_grid
-		Insert boundary: n_tiers + 1, b
+		nocheck Insert boundary: n_tiers + 1, b
 	endif
 endfor
 
