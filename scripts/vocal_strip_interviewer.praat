@@ -7,6 +7,9 @@
 #
 # Patrick Callier 7/2014
 #
+# UPDATE: This script doesn't work, because the Interviewer is not always on the tier I thought
+# DO NOT USE
+#
 
 form Give me two paths
 	sentence Input_tg
