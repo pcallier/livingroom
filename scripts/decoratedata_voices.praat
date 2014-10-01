@@ -20,6 +20,8 @@ form Decorate VoC measurements with extra data
 	sentence speaker
 endform
 
+# the script will label columns with this information, but if, e.g., creak tier is not present
+# then the script still works (as long as the tier numbers assigned below still match)
 phone_tier = 1
 word_tier = 2
 ip_tier = 3
@@ -80,7 +82,7 @@ for tier_i from 1 to ntiers
 	endif
 endfor
 # add headers for which metadata fields will be used (change also below)
-header_line$ = header_line$ + "	speaker	location	age	gender	race	sexual_orientation"
+header_line$ = header_line$ + "	speaker	sex	location	age	race	sexual_orientation"
 select measurements
 Set string: 1, header_line$
 
@@ -156,9 +158,9 @@ for line_i from 2 to nmeasures
 	which_line = Search column: "speaker", speaker$
 	survey_line$ = ""
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "speaker"]
+	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "sex"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "location"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "age"]
-	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "gender"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "race"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "sexual_orientation"]
 	cur_measure$ = cur_measure$ + survey_line$

@@ -9,13 +9,16 @@
 library(reshape2)
 library(plyr)
 
+warn.level = getOption("warn")
+options(warn=-1)
+
 args <- commandArgs(trailingOnly = TRUE)
 input.path <- args[1]
 output.path <- args[2]
 stopifnot(length(args) >= 2)
 
 data.df <- read.delim(input.path, na.strings=c("NA","--undefined--"), colClasses=c(word_segments="character", ip="character"),
- row.names=NULL, allowEscapes=TRUE, quote="")
+row.names=NULL, allowEscapes=TRUE, quote="")
 data.df$speaker_id <- data.df[,"speaker"]
 data.df$phone_id <- with(data.df, paste(speaker_id, phone, floor(start_phone * 1000), sep="_"))
 data.df$word_id <- with(data.df, paste(speaker_id, word, floor(start_word * 1000), sep="_"))
@@ -32,8 +35,9 @@ word.df$word_in_ip_perct <- with(word.df, (start_word-start_ip)/(end_ip-start_ip
 
 data.df <- merge(data.df, subset(word.df, select=c(word_id,num_syls,word_in_ip,word_in_ip_perct,stress_pattern)),by="word_id")
 
+
 message("Making IP-level table")
-ip.df <- ddply(data.df, .(ip_id), .fun=function(x) { 
+ip.df <- ddply(subset(data.df, select=c(F0,intensity,ip_id,word_id,num_syls)), .(ip_id), .fun=function(x) { 
   x$F0_max <- max(x$F0,na.rm=TRUE)
   x$F0_min <- min(x$F0,na.rm=TRUE)
   x$F0_median <- median(x$F0,na.rm=TRUE)
@@ -51,6 +55,10 @@ ip.df <- ddply(data.df, .(ip_id), .fun=function(x) {
   return(x)
 })
 
+data.df <- merge(data.df, subset(ip.df, select=c(-word_id,-num_syls,-F0,-intensity)),by="ip_id")
+
 # TODO: word frequency, PVI
 message("Saving result")
 write.table(data.df, file=output.path, row.names=FALSE, sep="\t", quote=FALSE)
+
+options(warn=warn.level)
