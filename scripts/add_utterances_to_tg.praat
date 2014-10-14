@@ -15,6 +15,7 @@ form Give me the ELAN export and TG you want to modify
 	sentence Tab_separated_timings /Volumes/Surfer/BigBrother/data/tmp/20140512_007M-008F_INT10_FAM_CHA.txt
 	sentence Textgrid_to_modify /Volumes/Surfer/BigBrother/data/annotations/20140512_007M-008F_INT10_FAM_CHA.TextGrid
 	boolean Overwrite_tg 0
+	boolean Voc_xml 1
 endform
 
 if overwrite_tg=1
@@ -34,29 +35,66 @@ Insert interval tier: n_tiers + 1, "Line"
 
 b = -1
 for line_i from 1 to n_lines
-	select tg_lines
-	cur_line$ = Get string: line_i
-	a = number ( replace_regex$(cur_line$, "^.*?\t.*?\t([0-9.]+)\t.*$", "\1",0) )
-	# cover case where prior right boundary equals current left boundary
-	if a = b
-		a = undefined
-	endif 
-	b = number ( replace_regex$(cur_line$, "^.*?\t.*?\t.*?\t([0-9.]+)\t.*$", "\1",0) )
-	line_text$ = replace_regex$(cur_line$, "^.*?\t.*?\t.*?\t([0-9.]+)\t(.*)$", "\2",0)
+	# the lines may be in two formats: tab-delim, or XML. We can't deal with all valid XML,
+	# but if the fields are ordered start, end, speaker, and text, then we can deal
+
+	if voc_xml = 0
+		select tg_lines
+		cur_line$ = Get string: line_i
+		a = number ( replace_regex$(cur_line$, "^.*?\t.*?\t([0-9.]+)\t.*$", "\1",0) )
+		# cover case where prior right boundary equals current left boundary
+		if a = b
+			a = undefined
+		endif 
+		b = number ( replace_regex$(cur_line$, "^.*?\t.*?\t.*?\t([0-9.]+)\t.*$", "\1",0) )
+		line_text$ = replace_regex$(cur_line$, "^.*?\t.*?\t.*?\t([0-9.]+)\t(.*)$", "\2",0)
 	
-	select tg
+		select tg
 	
-	if a <> undefined
-		# normal insertion
-		nocheck Insert boundary: n_tiers + 1, a
-		cur_int = Get interval at time: n_tiers + 1, a
+		if a <> undefined
+			# normal insertion
+			nocheck Insert boundary: n_tiers + 1, a
+			cur_int = Get interval at time: n_tiers + 1, a
+		else
+			# no need to add an extra boundary
+			cur_int = cur_int + 1
+		endif
+		Set interval text: n_tiers+1, cur_int, line_text$
+		if b <> end_of_grid
+			nocheck Insert boundary: n_tiers + 1, b
+		endif
 	else
-		# no need to add an extra boundary
-		cur_int = cur_int + 1
-	endif
-	Set interval text: n_tiers+1, cur_int, line_text$
-	if b <> end_of_grid
-		nocheck Insert boundary: n_tiers + 1, b
+		# VOC-style XML formatting, assuming order of start, end, speaker, text (and each record
+		# on a separate line), tries to ID speaker based on (VOC-style) filename
+		# 3C and 3E are hex codes for gt and lt signs (<, >)
+		speaker_guess$ = replace_regex$(tab_separated_timings$, "[BAK|RED|MER|SACI?]_((^_)+_(^_)+)_.*$", "\1", 0)
+		select tg_lines
+		cur_line$ = Get string: line_i
+		a = number (replace_regex$(cur_line$, "^.*\X3Cst\X3E(.+)\X3C/st\X3E.*$", "\1",0))
+		# cover case where prior right boundary equals current left boundary
+		if a = b
+			a = undefined
+		endif 
+		b = number (replace_regex$(cur_line$, "^.*\X3Cend\X3E(.+)\X3C/end\X3E.*$", "\1",0))
+		spkr$ = replace_regex$(cur_line$, "^.*\X3Cspkr\X3E(.+)\X3C/spkr\X3E.*$", "\1",0)
+		line_text$ = replace_regex$(cur_line$, "^.*\X3Cutt\X3E(.+)\X3C/utt\X3E.*$", "\1",0)
+		
+		if speaker_guess$ = spkr$
+			select tg
+	
+			if a <> undefined
+				# normal insertion
+				nocheck Insert boundary: n_tiers + 1, a
+				cur_int = Get interval at time: n_tiers + 1, a
+			else
+				# no need to add an extra boundary
+				cur_int = cur_int + 1
+			endif
+			Set interval text: n_tiers+1, cur_int, line_text$
+			if b <> end_of_grid
+				nocheck Insert boundary: n_tiers + 1, b
+			endif		
+		endif
 	endif
 endfor
 

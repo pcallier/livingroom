@@ -62,23 +62,24 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
 	# this is the WORKING folder for TGs, not the original location (which is in TGFILE already)
 	# strip Interviewer information from TG
 	STRIPPEDTG=${TGWORKING}/${SPEAKER}.TextGrid
-	# the alignments textgrid may have more than one speaker in it. the following script removes the interviewer
+	# the alignments textgrid may have more than one speaker in it. the following script removes the interviewer (somewhat intelligently)
 	/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/scripts/vocal_strip_interviewer.praat "$TGFILE" "$STRIPPEDTG" >> "$PROJECT_INFO" 2>&1
 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 	# add utterance info to TG
-	/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/scripts/add_utterances_to_tg.praat "$TRSDATA" "$STRIPPEDTG" 1 >> "$PROJECT_INFO" 2>&1
+	/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/scripts/add_utterances_to_tg.praat "$TRSDATA" "$STRIPPEDTG" 1 1 >> "$PROJECT_INFO" 2>&1
 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+
+# 	# UPDATE: Creak detection jams up pipeline, will spin off to its own process
 	# put chopped-up audio data onto remote
 	# this requires ssh authentication to my Stanford account (taken care of above), and for the AFS file
 	# system to be mounted (this you must do yourself)
 	# TODO: check for access to afs
 	# Chop up WAV into bits (phrase-sized)
-	echo `date -u`: "Chopping up utterances for creak detection..." >> "$PROJECT_INFO"
-	/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/scripts/save_labeled_intervals_to_wav_sound_files.praat "$BIGWAV" "$STRIPPEDTG" "$WAVWORKINGREMOTE" 1 0 0 3 0 1 0.025 >> "$PROJECT_INFO" 2>&1
-	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-	# Creak detection
-	# UPDATE: Creak detection jams up pipeline, will spin off to its own process
-	# copy creak-related scripts to remote (sigh)
+# 	echo `date -u`: "Chopping up utterances for creak detection..." >> "$PROJECT_INFO"
+# 	/Applications/Praat.app/Contents/MacOS/Praat ${PROJECT_ROOT}/livingroom/scripts/save_labeled_intervals_to_wav_sound_files.praat "$BIGWAV" "$STRIPPEDTG" "$WAVWORKINGREMOTE" 1 0 0 3 0 1 0.025 >> "$PROJECT_INFO" 2>&1
+# 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+# 	# Creak detection
+# 	# copy creak-related scripts to remote (sigh)
 # 	scp -r "${PROJECT_ROOT}/livingroom/scripts/creak_segmentation" pcallier@corn.stanford.edu:~/private/livingroom-util/ >> "$PROJECT_INFO" 2>&1
 # 	if [ $? -ne 0 ]; then echo "scp failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 # 	ssh pcallier@corn.stanford.edu <<ENDSSH
@@ -97,8 +98,8 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
 # 	find ${WAVWORKINGREMOTE} -type f -delete
 
 	# split again, now for analysis (phone-sized)
-	# Praat's deleting takes too long, use shell
 	echo `date -u`: "Chopping up utterances for analysis..." >> "$PROJECT_INFO"
+	# Praat's deleting takes too long, use shell
 	find ${WAVWORKING} -type f -delete
 	if [ $? -ne 0 ]; then echo "Find/delete failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 	/Applications/Praat.app/Contents/MacOS/Praat "${PROJECT_ROOT}/livingroom/scripts/save_labeled_intervals_to_wav_sound_files.praat" "$BIGWAV" "$STRIPPEDTG" "$WAVWORKING" 1 0 0 1 1 1 0.025 >> "$PROJECT_INFO" 2>&1
@@ -128,7 +129,5 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
 done
 
 echo `date -u`: "Goodbye..." >> "$PROJECT_INFO"
-kdestroy
-unlog
-
+1
 #/Applications/Praat.app/Contents/MacOS/Praat /Volumes/Surfer/users/pcallier/livingroom/scripts/save_labeled_intervals_to_wav_sound_files.praat /Users/BigBrother/Documents/VoCal/Retreat_Sample/RED_Fowler_Ginger.wav /Volumes/Surfer/users/pcallier/tgs/RED_Fowler_Ginger.TextGrid /Volumes/Surfer/users/pcallier/wavs/ 1 0 0 1 1 1 0.025 
