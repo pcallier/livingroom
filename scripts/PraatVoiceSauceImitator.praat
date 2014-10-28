@@ -134,7 +134,7 @@ for ifile to numberOfFiles
 	sound = selected("Sound")
 	# exceptionally long sounds are usually mistakes and can clog up the works, skip them
 	dur = Get total duration
-	if dur < max_length
+	if dur < max_length and dur > min_length
 		# set maximum frequency of Formant calculation algorithm on basis of sex
 		# sex is 1 for male (left); sex is 2 for female (right).
 		if speaker_sex = 1
@@ -187,6 +187,12 @@ for ifile to numberOfFiles
 			pitchrange_min = 70
 		endif
 		pitchrange_min_alt=50
+		
+		if dur < 3 / 40
+			pitchrange_min = 3 / dur
+			pitchrange_min_alt = 3 / dur
+		endif
+		
 		To Pitch... 0 'pitchrange_min' 'pitchrange_max'
 		pitch = selected("Pitch")
 		Interpolate
