@@ -33,7 +33,9 @@ WAVWORKINGREMOTE=/afs/.ir/users/p/c/pcallier/private/livingroom-util/wav_working
 # aklog
 # if [ $? -ne 0 ]; then echo "Failed to get AFS token. Line ${LINENO}" >> "$PROJECT_INFO"; exit 1; fi
 
+echo "Metadata at $METADATA_PATH" >> "$PROJECT_INFO"
 echo "Starting to read metadata..." >> "$PROJECT_INFO"
+
 sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SEXUAL_ORIENTATION WAV_PATH TG_PATH TRS_DATA_PATH; do
 	echo `date -u`: "Starting to work with $SPEAKER..."  >> "$PROJECT_INFO"
 	BIGWAV=$WAV_PATH
@@ -129,5 +131,5 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
 done
 
 echo `date -u`: "Goodbye..." >> "$PROJECT_INFO"
-1
+
 #/Applications/Praat.app/Contents/MacOS/Praat /Volumes/Surfer/users/pcallier/livingroom/scripts/save_labeled_intervals_to_wav_sound_files.praat /Users/BigBrother/Documents/VoCal/Retreat_Sample/RED_Fowler_Ginger.wav /Volumes/Surfer/users/pcallier/tgs/RED_Fowler_Ginger.TextGrid /Volumes/Surfer/users/pcallier/wavs/ 1 0 0 1 1 1 0.025 
