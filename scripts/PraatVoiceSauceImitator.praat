@@ -134,7 +134,8 @@ for ifile to numberOfFiles
 	sound = selected("Sound")
 	# exceptionally long sounds are usually mistakes and can clog up the works, skip them
 	dur = Get total duration
-	if dur < max_length and dur > min_length
+	#min_length
+	if dur < max_length
 		# set maximum frequency of Formant calculation algorithm on basis of sex
 		# sex is 1 for male (left); sex is 2 for female (right).
 		if speaker_sex = 1
