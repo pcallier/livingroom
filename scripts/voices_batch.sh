@@ -125,7 +125,7 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
 	#if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 
 	# clean-up, etc
-	cp $MEASUREMENTS_WIDE_PATH $MEASUREMENTS_FINAL_PATH >> "$PROJECT_INFO" 2>&1
+	cp $MEASUREMENTS_DECORATED_PATH $MEASUREMENTS_FINAL_PATH >> "$PROJECT_INFO" 2>&1
 	find ${WAVWORKING} -type f -delete >> "$PROJECT_INFO" 2>&1
 	echo `date -u`: "Done with $SPEAKER." >> "$PROJECT_INFO"
 done
