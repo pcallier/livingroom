@@ -5,44 +5,33 @@ library(reshape2)
 library(ggplot2)
 library(lme4)
 library(lmerTest)
-
+library(plyr)
+library(dplyr)
 args <- commandArgs(trailingOnly = TRUE)
 
-base.dir <- "/Users/patrickcallier/Dropbox/ongoing/postdoc/livingroom"
-data.df <- read.delim(file.path(base.dir, "work", "test_output.txt"), na.strings="--undefined--")
+base.dir <- "/Volumes/Surfer/users/pcallier"
+data.df <- read.delim(file.path(base.dir, "results", "BAK_Boles_Carolyn.tsv"), na.strings=c("NA","--undefined--"))
 data.df$phone_id <- factor(with(data.df, Filename))
 
 # some stats
 phones.df<-unique(data.df[,c("phone_id","Segment.label")])
-summary(phones.df$Segment.label)
-chunks.df <- dcast(subset(data.df, Measure=="F0"), phone_id ~ "no.chunks", fun.aggregate=length)
+phones.summary <- data.frame(count=summary(phones.df$Segment.label))
+chunks.df <- dcast(data.df, phone_id ~ "no.chunks", fun.aggregate=length)
 
 # vowel analysis
-# reducing to one mean per segment
+vowels.df <- merge(ddply(select(droplevels(data.df[grepl("[AEIOU].[01]",data.df$Segment.label),]),F1,F2,Segment.label),
+                   .(Segment.label), .fun=function(.) { return(data.frame(F1=median(.$F1,na.rm=TRUE),
+                                                                          F2=median(.$F2,na.rm=TRUE))) } ),
+                   phones.summary, by.x="Segment.label", by.y="row.names")
 
-vowels.df <- dcast(droplevels(data.df[grepl("[AEIOU].[01]",data.df$Segment.label) &
-                                        data.df$Measure %in% c("F1","F2","F3"),]),
-                   Segment.label~ Measure, 
-                   value.var = "Value",
-                   fun.aggregate=function(.) { median(., na.rm=TRUE) })
-
-ggplot(aes(x = F2, y=F1, label=Segment.label), data=vowels.df) +
+ggplot(aes(x = F2, y=F1, label=Segment.label), data=filter(vowels.df, count > 10)) +
   geom_text() + scale_x_reverse() + scale_y_reverse()
 
 # voice quality first steps
-creak.df <- dcast(droplevels(data.df[grepl("[AEIOU].[01]",data.df$Segment.label) &
-                                        data.df$Measure %in% c("H1c","H2c","CPPS",
-                                                               "A1c","A2c","A3c",
-                                                               "2k","5k"),]),
-                   creak ~ Measure, 
-                   value.var = "Value",
-                   fun.aggregate=function(.) { mean(., na.rm=TRUE) })
-
-massive.df <- dcast(data.df, ... ~ Measure, value.var="Value")
-ggplot(aes(x = creak, y=H1c-H2c), data=massive.df) + geom_boxplot()
-ggplot(aes(x = creak, y=CPPS), data=massive.df) +  geom_boxplot()
-ggplot(aes(x = CPPS, y=F0, color=creak), data=massive.df) + 
+ggplot(aes(x = Segment.label, y=H1c-H2c), data=data.df) + geom_boxplot()
+ggplot(aes(x = Segment.label, y=CPPS), data=data.df) +  geom_boxplot()
+ggplot(aes(x = CPPS, y=F0), data=data.df) + 
   stat_density2d() + geom_point(alpha=0.2) 
-ggplot(aes(x = CPPS, y=H1c-H2c, color=creak), data=massive.df) + 
+ggplot(aes(x = CPPS, y=H1c-H2c), data=massive.df) + 
   stat_density2d() + geom_point(alpha=0.2) 
 

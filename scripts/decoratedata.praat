@@ -4,7 +4,8 @@
 # decorated TextGrid of the audio (with phone, word, utterance, creak, smiles, etc.),
 # and the survey responses (responses_all.tsv) from the survey system.
 # 
-# Output is an even bigger table file with a whole bunch of crap in it.
+# Output is an even bigger table file with a whole bunch of crap in it: speaker and
+# session metadata, mostly, along with the co-occurrence data on the creak and smile tiers
 #
 # FRAGILE: Assumes (though you may change these parameters) that phones are tier 1,
 # words are tier 2, lines/utterances/IPs are tier 3, creak is tier 4
