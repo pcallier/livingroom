@@ -18,11 +18,13 @@ summary(phones.df$Segment.label)
 chunks.df <- dcast(subset(data.df, Measure=="F0"), phone_id ~ "no.chunks", fun.aggregate=length)
 
 # vowel analysis
+# reducing to one mean per segment
+
 vowels.df <- dcast(droplevels(data.df[grepl("[AEIOU].[01]",data.df$Segment.label) &
                                         data.df$Measure %in% c("F1","F2","F3"),]),
                    Segment.label~ Measure, 
                    value.var = "Value",
-                   fun.aggregate=function(.) { mean(., na.rm=TRUE) })
+                   fun.aggregate=function(.) { median(., na.rm=TRUE) })
 
 ggplot(aes(x = F2, y=F1, label=Segment.label), data=vowels.df) +
   geom_text() + scale_x_reverse() + scale_y_reverse()
