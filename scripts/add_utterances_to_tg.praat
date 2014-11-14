@@ -8,14 +8,15 @@
 # Output is a TextGrid object with the Utterance timings added. 
 # ~~If overwrite_tg is checked, the tg file given will be overwritten~~
 #
-# The input file should be tab-delimited and have the beginning time in the third column,
+# The input file should be tab-delimited, with at least five columns
+# and have the beginning time in the third column,
 # ending time in the fourth column, text in the fifth
 
 form Give me the ELAN export and TG you want to modify
-	sentence Tab_separated_timings /Volumes/Surfer/BigBrother/data/tmp/20140512_007M-008F_INT10_FAM_CHA.txt
-	sentence Textgrid_to_modify /Volumes/Surfer/BigBrother/data/annotations/20140512_007M-008F_INT10_FAM_CHA.TextGrid
+	sentence Tab_separated_timings /Volumes/data_drive/corpora/living_room/data/annotations/20140512_008F_INT010_FAM_CHA.txt
+	sentence Textgrid_to_modify /Volumes/Surfer/users/pcallier/livingroom/.working/tgs/20140512_008F_010_FAM_CHA.TextGrid
 	boolean Overwrite_tg 0
-	boolean Voc_xml 1
+	boolean Voc_xml 0
 endform
 
 if overwrite_tg=1
@@ -67,6 +68,7 @@ for line_i from 1 to n_lines
 		# VOC-style XML formatting, assuming order of start, end, speaker, text (and each record
 		# on a separate line), tries to ID speaker based on (VOC-style) filename
 		# 3C and 3E are hex codes for gt and lt signs (<, >)
+		# I DON'T THINK THIS WORKS YET
 		speaker_guess$ = replace_regex$(tab_separated_timings$, "[BAK|RED|MER|SACI?]_((^_)+_(^_)+)_.*$", "\1", 0)
 		select tg_lines
 		cur_line$ = Get string: line_i

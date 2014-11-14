@@ -8,7 +8,9 @@
 # session metadata, mostly, along with the co-occurrence data on the creak and smile tiers
 #
 # FRAGILE: Assumes (though you may change these parameters) that phones are tier 1,
-# words are tier 2, lines/utterances/IPs are tier 3, creak is tier 4
+# words are tier 2, lines/utterances/IPs are tier 3, creak is tier 4. Does not break if
+# these are not present, but they must be in the positions specified below or else 
+# they will not be labeled properly
 #
 # See also comment in form...endform block below about userinforecord_id field
 #
@@ -23,6 +25,7 @@ form Decorate measurements with extra data
 	# for purposes of this script, you have to pick one. if you 
 	# need more advanced functionality, you should probably 
 	# doctor the responses-all.tsv table yourself.
+
 	comment Which line of the survey to use? (2nd to last field)
 	sentence which_userinforecord_id 5757487680585728
 	
@@ -105,13 +108,17 @@ for line_i from 2 to nmeasures
 	# filename in first column
 	timestamp = number ( replace_regex$ ( cur_measure$, "^[^\t].*?([0-9]+)\t.*$", "\1", 0 ))
 
-	# offset in 8th and ninth columns
-	windowstart$ = replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})(.+)\t(.*)$", "\3", 0 )
+	# offset in 6th and 7th columns
+	windowstart$ = replace_regex$ ( cur_measure$, "^((([^\t]*)\t){6}).*?$", "\3", 0 )
 	windowstart = number ( windowstart$ )
-	windowend$ = replace_regex$ ( cur_measure$, "^(([^\t]*\t){7})(.+)\t(.*)$", "\4", 0 )
+
+	windowend$ = replace_regex$ ( cur_measure$, "^((([^\t]*)\t){7}).*?$", "\3", 0 )
 	windowend = number (windowend$)
 
 	timepoint = timestamp / 1000 + windowstart + (windowend-windowstart)/2
+	
+	#printline Times: 'timestamp', 'timepoint'
+	#printline Windows: 'windowstart$', 'windowend$'
 	
 	cur_measure$ = cur_measure$ + tab$ + string$ (timepoint)
 	select textgrid
@@ -153,6 +160,7 @@ for line_i from 2 to nmeasures
 	select survey
 	Rename... r
 	which_line = Search column: "userinforecord_id", which_userinforecord_id$
+#	printline Survey line: 'which_line'
 	survey_line$ = ""
 #	survey_line$ = tab$ + Table_r$ [which_line, "firstname"] + tab$ + Table_r$ [which_line, "lastname"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "user_id"]
