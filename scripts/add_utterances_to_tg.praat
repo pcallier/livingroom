@@ -13,8 +13,8 @@
 # ending time in the fourth column, text in the fifth
 
 form Give me the ELAN export and TG you want to modify
-	sentence Tab_separated_timings /Users/BigBrother/Documents/VoCal/text_corpus/BAK/BAK_Bianchi_Pat_proc.txt
-	sentence Textgrid_to_modify /Volumes/Surfer/corpora/VoCal/subsamples/retreat_sample/BAK_Bianchi_Pat.TextGrid
+	sentence Tab_separated_timings /Users/BigBrother/Documents/VoCal/text_corpus/MER/MER_Matheron_Duane_proc.txt
+	sentence Textgrid_to_modify /Volumes/Surfer/users/pcallier/tgs/MER_Matheron_Duane.TextGrid
 	boolean Overwrite_tg 0
 	boolean Voc_xml 0
 endform
@@ -45,6 +45,7 @@ for line_i from 1 to n_lines
 		select tg_lines
 		cur_line$ = Get string: line_i
 		a = number ( replace_regex$(cur_line$, "^.*?\t.*?\t([0-9.]+)\t.*$", "\1",0) )
+		printline a: 'a', b: 'b'
 		# cover case where prior right boundary equals current left boundary
 		if a = b
 			a = undefined
@@ -75,17 +76,18 @@ for line_i from 1 to n_lines
 		#printline Speaker guess: 'speaker_guess$'
 		select tg_lines
 		cur_line$ = Get string: line_i
-		a = number (replace_regex$(cur_line$, "^.*\X3Cst\X3E(.+)\X3C/st\X3E.*$", "\1",0))
-		# cover case where prior right boundary equals current left boundary
-		if a = b
-			a = undefined
-		endif 
-		b = number (replace_regex$(cur_line$, "^.*\X3Cend\X3E(.+)\X3C/end\X3E.*$", "\1",0))
 		spkr$ = replace_regex$(cur_line$, "^.*\X3Cspkr\X3E(.+)\X3C/spkr\X3E.*$", "\1",0)
 		line_text$ = replace_regex$(cur_line$, "^.*\X3Cutt\X3E(.+)\X3C/utt\X3E.*$", "\1",0)
 		#printline Speaker: 'spkr$'
 				
 		if speaker_guess$ = spkr$
+			a = number (replace_regex$(cur_line$, "^.*\X3Cst\X3E(.+)\X3C/st\X3E.*$", "\1",0))
+			# cover case where prior right boundary equals current left boundary
+			if a = b
+				a = undefined
+			endif 
+			b = number (replace_regex$(cur_line$, "^.*\X3Cend\X3E(.+)\X3C/end\X3E.*$", "\1",0))
+			printline a: 'a', b: 'b'
 			select tg
 	
 			if a <> undefined
@@ -94,6 +96,7 @@ for line_i from 1 to n_lines
 				cur_int = Get interval at time: n_tiers + 1, a
 			else
 				# no need to add an extra boundary
+				printline Cur int: 'cur_int'
 				cur_int = cur_int + 1
 			endif
 			Set interval text: n_tiers+1, cur_int, line_text$

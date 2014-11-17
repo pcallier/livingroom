@@ -66,9 +66,9 @@ for i from 3 to ntiers
 			lowscore_tier = tier_i
 		endif
 		
-		printline 'tier_name$': 'tier_score'
+		#printline 'tier_name$': 'tier_score'
 	endfor
-	printline Low scoring tier: 'lowscore_tier'
+	#printline Low scoring tier: 'lowscore_tier'
 	if lowscore_tier <> 0
 		Remove tier: lowscore_tier
 	endif
