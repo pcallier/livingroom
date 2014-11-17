@@ -27,7 +27,7 @@ tg_name$ = selected$ ("TextGrid")
 speaker_first$ = replace_regex$(tg_name$, "(BAK|RED|MER)_([^_]+)_([^_]+).*?$", "\L\3", 0)
 speaker_last$ = replace_regex$(tg_name$, "(BAK|RED|MER)_([^_]+)_([^_]+).*?$", "\L\2", 0)
 
-# starts at 3, so that in end only two remain 
+# starts at 3, so that in end only two remain
 ntiers = Get number of tiers
 for i from 3 to ntiers
 	printline 'i'
