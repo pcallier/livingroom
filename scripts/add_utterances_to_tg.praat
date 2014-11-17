@@ -13,8 +13,8 @@
 # ending time in the fourth column, text in the fifth
 
 form Give me the ELAN export and TG you want to modify
-	sentence Tab_separated_timings /Volumes/data_drive/corpora/living_room/data/annotations/20140512_008F_INT010_FAM_CHA.txt
-	sentence Textgrid_to_modify /Volumes/Surfer/users/pcallier/livingroom/.working/tgs/20140512_008F_010_FAM_CHA.TextGrid
+	sentence Tab_separated_timings /Users/BigBrother/Documents/VoCal/text_corpus/BAK/BAK_Bianchi_Pat_proc.txt
+	sentence Textgrid_to_modify /Volumes/Surfer/corpora/VoCal/subsamples/retreat_sample/BAK_Bianchi_Pat.TextGrid
 	boolean Overwrite_tg 0
 	boolean Voc_xml 0
 endform
@@ -38,6 +38,8 @@ b = -1
 for line_i from 1 to n_lines
 	# the lines may be in two formats: tab-delim, or XML. We can't deal with all valid XML,
 	# but if the fields are ordered start, end, speaker, and text, then we can deal
+	# only works if speaker's name is formatted according to apparent convention
+	# of "Last_First," matching the filenames
 
 	if voc_xml = 0
 		select tg_lines
@@ -69,7 +71,8 @@ for line_i from 1 to n_lines
 		# on a separate line), tries to ID speaker based on (VOC-style) filename
 		# 3C and 3E are hex codes for gt and lt signs (<, >)
 		# I DON'T THINK THIS WORKS YET
-		speaker_guess$ = replace_regex$(tab_separated_timings$, "[BAK|RED|MER|SACI?]_((^_)+_(^_)+)_.*$", "\1", 0)
+		speaker_guess$ = replace_regex$(tab_separated_timings$, "^.*(BAK|RED|MER|SAC)I?_([^_]+_[^_]+).*$", "\2", 0)
+		#printline Speaker guess: 'speaker_guess$'
 		select tg_lines
 		cur_line$ = Get string: line_i
 		a = number (replace_regex$(cur_line$, "^.*\X3Cst\X3E(.+)\X3C/st\X3E.*$", "\1",0))
@@ -80,7 +83,8 @@ for line_i from 1 to n_lines
 		b = number (replace_regex$(cur_line$, "^.*\X3Cend\X3E(.+)\X3C/end\X3E.*$", "\1",0))
 		spkr$ = replace_regex$(cur_line$, "^.*\X3Cspkr\X3E(.+)\X3C/spkr\X3E.*$", "\1",0)
 		line_text$ = replace_regex$(cur_line$, "^.*\X3Cutt\X3E(.+)\X3C/utt\X3E.*$", "\1",0)
-		
+		#printline Speaker: 'spkr$'
+				
 		if speaker_guess$ = spkr$
 			select tg
 	

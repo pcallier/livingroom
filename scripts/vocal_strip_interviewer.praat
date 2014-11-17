@@ -16,6 +16,8 @@ form Give me two paths
 	sentence Output_tg
 endform
 
+clearinfo
+
 if input_tg$ = output_tg$
 	exitScript: "Do not overwrite original TG"
 endif
@@ -25,15 +27,18 @@ tg_name$ = selected$ ("TextGrid")
 speaker_first$ = replace_regex$(tg_name$, "(BAK|RED|MER)_([^_]+)_([^_]+).*?$", "\L\3", 0)
 speaker_last$ = replace_regex$(tg_name$, "(BAK|RED|MER)_([^_]+)_([^_]+).*?$", "\L\2", 0)
 
+# starts at 3, so that in end only two remain 
 ntiers = Get number of tiers
 for i from 3 to ntiers
-	lowscore=0
+	printline 'i'
+	lowscore=1
 	lowscore_tier=0
-	ntiers=Get number of tiers
-	for tier_i from 1 to ntiers
+	ntiers_=Get number of tiers
+	for tier_i from 1 to ntiers_
 		tier_score = 0
 		tier_name$ = Get tier name: tier_i
 		tier_name$ = replace_regex$(tier_name$, ".", "\L&", 0)
+		
 		# score tier name, penalizing for things that are not speaker, rewarding for things that are
 		if index (tier_name$, speaker_first$) <> 0
 			tier_score = tier_score + 1
@@ -50,13 +55,20 @@ for i from 3 to ntiers
 
 		if index (tier_name$, "interviewer") <> 0
 			tier_score = tier_score - 1
-		endif				
-
+		endif
+					
+		if index (tier_name$, "other") <> 0
+			tier_score = tier_score - 1
+		endif
+		
 		if tier_score < lowscore
 			lowscore = tier_score
 			lowscore_tier = tier_i
 		endif
+		
+		printline 'tier_name$': 'tier_score'
 	endfor
+	printline Low scoring tier: 'lowscore_tier'
 	if lowscore_tier <> 0
 		Remove tier: lowscore_tier
 	endif
