@@ -96,16 +96,16 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER_ID INTERACTION_ID SURVEY_ID
 					# run measurements script
 					echo `date -u`: "Starting measurements..." >> "$PROJECT_INFO"
 					/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/PraatVoiceSauceImitator.praat" "${SPEAKER_ID}_INT${INTERACTION_ID}" "$WAVWORKING" .wav  "$WAVWORKING" .TextGrid "${RESULTS_DIR}/.working" 1 0.025 0.025 0.010 10 "$GENDER" 500 550 1485 1650 2475 2750 >> "$PROJECT_INFO" 2>&1
-					if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+					if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_PATH}; continue; fi
 					echo `date -u`: "Done with measurements..." >> "$PROJECT_INFO"
 				fi
 				echo `date -u`: "Converting to wide format..." >> "$PROJECT_INFO"
 				rscript --slave "${SCRIPT_DIR}/long_to_wide.r" "$MEASUREMENTS_PATH" "$MEASUREMENTS_WIDE_PATH" >> "$PROJECT_INFO" 2>&1
-				if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+				if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_WIDE_PATH}; continue; fi
 			fi
 			echo `date -u`: "Adding extra information from text grid..." >> "$PROJECT_INFO"
 			/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/decoratedata.praat" "${MEASUREMENTS_WIDE_PATH}" "${STRIPPEDTG}" "${SURVEY_PATH}" "${SURVEY_ID}" "${MEASUREMENTS_DECORATED_PATH}" >> "$PROJECT_INFO" 2>&1
-			if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+			if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_DECORATED_PATH}; continue; fi
 		fi
 
 		# This takes wayyy too long
