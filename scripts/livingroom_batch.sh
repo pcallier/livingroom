@@ -82,31 +82,37 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER_ID INTERACTION_ID SURVEY_ID
 
 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 
-	# split again, now for analysis (phone-sized)
-	echo `date -u`: "Chopping up utterances for analysis..." >> "$PROJECT_INFO"
-	# Praat's deleting takes too long, use shell
-	find ${WAVWORKING} -type f -delete
-	if [ $? -ne 0 ]; then echo "Find/delete failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-	/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/save_labeled_intervals_to_wav_sound_files.praat" "$BIGWAV" "$STRIPPEDTG" "$WAVWORKING" 1 0 0 1 1 1 0.025 >> "$PROJECT_INFO" 2>&1
-	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-	# run measurements script
-	echo `date -u`: "Starting measurements..." >> "$PROJECT_INFO"
-	/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/PraatVoiceSauceImitator.praat" "${SPEAKER_ID}_INT${INTERACTION_ID}" "$WAVWORKING" .wav  "$WAVWORKING" .TextGrid "${RESULTS_DIR}/.working" 1 0.025 0.025 0.010 10 "$GENDER" 500 550 1485 1650 2475 2750 >> "$PROJECT_INFO" 2>&1
-	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-	echo `date -u`: "Done with measurements..." >> "$PROJECT_INFO"
-	# Decorate
-	echo `date -u`: "Converting to wide format..." >> "$PROJECT_INFO"
-	rscript --slave "${SCRIPT_DIR}/long_to_wide.r" "$MEASUREMENTS_PATH" "$MEASUREMENTS_WIDE_PATH" >> "$PROJECT_INFO" 2>&1
-	if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-	echo `date -u`: "Adding extra information from text grid..." >> "$PROJECT_INFO"
-	/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/decoratedata.praat" "${MEASUREMENTS_WIDE_PATH}" "${STRIPPEDTG}" "${SURVEY_PATH}" "${SURVEY_ID}" "${MEASUREMENTS_DECORATED_PATH}" >> "$PROJECT_INFO" 2>&1
-	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-	
-	# This takes wayyy too long
-	#echo `date -u`: "Adding extra niceties (almost done)..." >> "$PROJECT_INFO"
-	#rscript --slave "${SCRIPT_DIR}/reshapedata.r" "$MEASUREMENTS_DECORATED_PATH" "$MEASUREMENTS_RESHAPED_PATH" >> "$PROJECT_INFO" 2>&1
-	#if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+	if [ ! -f $MEASUREMENTS_RESHAPED_PATH ]; then
+		if [ ! -f $MEASUREMENTS_DECORATED_PATH ]; then
+			if [ ! -f $MEASUREMENTS_WIDE_PATH ]; then
+				if [ ! -f $MEASUREMENTS_PATH ]; then
+					# split again, now for analysis (phone-sized)
+					echo `date -u`: "Chopping up utterances for analysis..." >> "$PROJECT_INFO"
+					# Praat's deleting takes too long, use shell
+					find ${WAVWORKING} -type f -delete
+					if [ $? -ne 0 ]; then echo "Find/delete failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+					/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/save_labeled_intervals_to_wav_sound_files.praat" "$BIGWAV" "$STRIPPEDTG" "$WAVWORKING" 1 0 0 1 1 1 0.025 >> "$PROJECT_INFO" 2>&1
+					if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+					# run measurements script
+					echo `date -u`: "Starting measurements..." >> "$PROJECT_INFO"
+					/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/PraatVoiceSauceImitator.praat" "${SPEAKER_ID}_INT${INTERACTION_ID}" "$WAVWORKING" .wav  "$WAVWORKING" .TextGrid "${RESULTS_DIR}/.working" 1 0.025 0.025 0.010 10 "$GENDER" 500 550 1485 1650 2475 2750 >> "$PROJECT_INFO" 2>&1
+					if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+					echo `date -u`: "Done with measurements..." >> "$PROJECT_INFO"
+				fi
+				echo `date -u`: "Converting to wide format..." >> "$PROJECT_INFO"
+				rscript --slave "${SCRIPT_DIR}/long_to_wide.r" "$MEASUREMENTS_PATH" "$MEASUREMENTS_WIDE_PATH" >> "$PROJECT_INFO" 2>&1
+				if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+			fi
+			echo `date -u`: "Adding extra information from text grid..." >> "$PROJECT_INFO"
+			/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/decoratedata.praat" "${MEASUREMENTS_WIDE_PATH}" "${STRIPPEDTG}" "${SURVEY_PATH}" "${SURVEY_ID}" "${MEASUREMENTS_DECORATED_PATH}" >> "$PROJECT_INFO" 2>&1
+			if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+		fi
 
+		# This takes wayyy too long
+		#echo `date -u`: "Adding extra niceties (almost done)..." >> "$PROJECT_INFO"
+		#rscript --slave "${SCRIPT_DIR}/reshapedata.r" "$MEASUREMENTS_DECORATED_PATH" "$MEASUREMENTS_RESHAPED_PATH" >> "$PROJECT_INFO" 2>&1
+		#if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+	fi
 	# clean-up, etc
 	cp $MEASUREMENTS_DECORATED_PATH $MEASUREMENTS_FINAL_PATH >> "$PROJECT_INFO" 2>&1
 	find ${WAVWORKING} -type f -delete >> "$PROJECT_INFO" 2>&1
