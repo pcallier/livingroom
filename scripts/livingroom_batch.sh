@@ -12,8 +12,8 @@
 #	Patrick Callier, 2014
 #
 
-METADATA_PATH=$(cd $(dirname $1); pwd)/$(basename $1)
-RESULTS_DIR=`cd $2; pwd`
+METADATA_PATH=$(cd $(dirname "$1"); pwd)/$(basename "$1")
+RESULTS_DIR=`cd "$2"; pwd`
 if [ ! -d "${RESULTS_DIR}/.working" ]; then
 	mkdir -p "${RESULTS_DIR}/.working"
 fi
@@ -30,8 +30,8 @@ if [ ! -d "$WAVWORKING" ]; then
 	mkdir -p "$WAVWORKING"
 fi
 PROJECT_INFO="${PROJECT_SETTINGS}/info.log"
-SCRIPT_DIR=$(dirname ${0})
-SURVEY_PATH=$(cd $(dirname $3); pwd)/$(basename $3)
+SCRIPT_DIR=$(dirname "${0}")
+SURVEY_PATH=$(cd $(dirname "$3"); pwd)/$(basename "$3")
 
 echo `date -u`: "METADATA_PATH=$METADATA_PATH; RESULTS_DIR=$RESULTS_DIR; TGWORKING=$TGWORKING; WAVWORKING=$WAVWORKING" >> "$PROJECT_INFO" 2>&1
 

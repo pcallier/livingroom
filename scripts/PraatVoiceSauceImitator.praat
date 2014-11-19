@@ -409,11 +409,10 @@ for ifile to numberOfFiles
 							a3db = undefined         
 							h1c = undefined
 							h2c = undefined
+							h4c = undefined
 							a1hz = undefined                                                        
 							a2hz = undefined                                                        
 							a3hz = undefined         
-							h1hz = undefined
-							h2hz = undefined
 							a1c = undefined                                                        
 							a2c = undefined                                                        
 							a3c = undefined
@@ -426,16 +425,19 @@ for ifile to numberOfFiles
 						a3hz = undefined         
 						h1hz = undefined
 						h2hz = undefined
-						a1hz = undefined                                                        
+						h4hz = undefined
+						a1db = undefined                                                        
 						a2db = undefined                                                        
 						a3db = undefined         
+						h1db = undefined
+						h2db = undefined
+						h4db = undefined
 						h1c = undefined
 						h2c = undefined
+						h4c = undefined
 						a1c = undefined                                                        
 						a2c = undefined                                                        
 						a3c = undefined
-						h1db = undefined
-						h2db = undefined
 						p0db = undefined
 						p0hz = undefined						
 					endif  # if n_f0md not undefined

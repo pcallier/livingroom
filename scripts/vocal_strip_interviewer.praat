@@ -30,7 +30,7 @@ speaker_last$ = replace_regex$(tg_name$, "(BAK|RED|MER)_([^_]+)_([^_]+).*?$", "\
 # starts at 3, so that in end only two remain
 ntiers = Get number of tiers
 for i from 3 to ntiers
-	printline 'i'
+	#printline 'i'
 	lowscore=1
 	lowscore_tier=0
 	ntiers_=Get number of tiers

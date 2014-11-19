@@ -45,7 +45,7 @@ for line_i from 1 to n_lines
 		select tg_lines
 		cur_line$ = Get string: line_i
 		a = number ( replace_regex$(cur_line$, "^.*?\t.*?\t([0-9.]+)\t.*$", "\1",0) )
-		printline a: 'a', b: 'b'
+		#printline a: 'a', b: 'b'
 		# cover case where prior right boundary equals current left boundary
 		if a = b
 			a = undefined
@@ -87,7 +87,7 @@ for line_i from 1 to n_lines
 				a = undefined
 			endif 
 			b = number (replace_regex$(cur_line$, "^.*\X3Cend\X3E(.+)\X3C/end\X3E.*$", "\1",0))
-			printline a: 'a', b: 'b'
+			#printline a: 'a', b: 'b'
 			select tg
 	
 			if a <> undefined
@@ -96,7 +96,7 @@ for line_i from 1 to n_lines
 				cur_int = Get interval at time: n_tiers + 1, a
 			else
 				# no need to add an extra boundary
-				printline Cur int: 'cur_int'
+				#printline Cur int: 'cur_int'
 				cur_int = cur_int + 1
 			endif
 			Set interval text: n_tiers+1, cur_int, line_text$
