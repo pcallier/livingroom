@@ -43,17 +43,17 @@ WAVWORKINGREMOTE=/afs/.ir/users/p/c/pcallier/private/livingroom-util/wav_working
 echo "Metadata at $METADATA_PATH" >> "$PROJECT_INFO"
 echo "Starting to read metadata..." >> "$PROJECT_INFO"
 
-sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SEXUAL_ORIENTATION WAV_PATH TG_PATH TRS_DATA_PATH; do
+sed 1d "$METADATA_PATH" | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SEXUAL_ORIENTATION WAV_PATH TG_PATH TRS_DATA_PATH; do
 	echo `date -u`: "Starting to work with $SPEAKER..."  >> "$PROJECT_INFO"
-	BIGWAV=$WAV_PATH
-	TRSDATA=$TRS_DATA_PATH
-	TGFILE=$TG_PATH
+	BIGWAV="$WAV_PATH"
+	TRSDATA="$TRS_DATA_PATH"
+	TGFILE="$TG_PATH"
 	# the results end up in the directory we specify (results/.working, which is hidden) with the name SPEAKER_pitchresults.txt
-	MEASUREMENTS_PATH=${RESULTS_DIR}/.working/${SPEAKER}_pitchresults.txt
-	MEASUREMENTS_WIDE_PATH=${RESULTS_DIR}/.working/${SPEAKER}_pitchresults_wide.txt
-	MEASUREMENTS_DECORATED_PATH=${RESULTS_DIR}/.working/${SPEAKER}_pitchresults_decorated.txt
-	MEASUREMENTS_RESHAPED_PATH=${RESULTS_DIR}/.working/${SPEAKER}_pitchresults_reshaped.txt
-	MEASUREMENTS_FINAL_PATH=${RESULTS_DIR}/${SPEAKER}.tsv
+	MEASUREMENTS_PATH="${RESULTS_DIR}/.working/${SPEAKER}_pitchresults.txt"
+	MEASUREMENTS_WIDE_PATH="${RESULTS_DIR}/.working/${SPEAKER}_pitchresults_wide.txt"
+	MEASUREMENTS_DECORATED_PATH="${RESULTS_DIR}/.working/${SPEAKER}_pitchresults_decorated.txt"
+	MEASUREMENTS_RESHAPED_PATH="${RESULTS_DIR}/.working/${SPEAKER}_pitchresults_reshaped.txt"
+	MEASUREMENTS_FINAL_PATH="${RESULTS_DIR}/${SPEAKER}.tsv"
 
 	# check to see if we already have results for this speaker
 	if [ -f "$MEASUREMENTS_FINAL_PATH" ]; then echo `date -u`: "Results exist for $SPEAKER. Next..." >> "$PROJECT_INFO"; continue 1; fi
@@ -63,7 +63,7 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
 	if [ -f "$TRSDATA" ]; then TRSDATA_READY=1; else TRSDATA_READY=0; fi
 	if [ -f "$TGFILE" ]; then TGFILE_READY=1; else TGFILE_READY=0; fi
 	
-	if [ $BIGWAV_READY -eq 0 ] || [ $TGFILE_READY -eq 0  ]; then
+	if [ "$BIGWAV_READY" -eq 0 ] || [ "$TGFILE_READY" -eq 0  ]; then
 		echo `date -u`: "Files not found; BIGWAV_READY=$BIGWAV_READY TRSDATA_READY=$TRSDATA_READY TGFILE_READY=$TGFILE_READY" >> "$PROJECT_INFO"
 		continue
 	fi	
@@ -75,48 +75,22 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
 	/Applications/Praat.app/Contents/MacOS/Praat ${SCRIPT_DIR}/vocal_strip_interviewer.praat "$TGFILE" "$STRIPPEDTG" >> "$PROJECT_INFO" 2>&1
 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 
-	if [ $TRSDATA_READY -ne 0 ]; then
+	if [ "$TRSDATA_READY" -ne 0 ]; then
 		# add utterance info to TG
 		/Applications/Praat.app/Contents/MacOS/Praat ${SCRIPT_DIR}/add_utterances_to_tg.praat "$TRSDATA" "$STRIPPEDTG" 1 1 >> "$PROJECT_INFO" 2>&1
 		if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 	fi
 
-# 	# UPDATE: Creak detection jams up pipeline, will spin off to its own process
-	# put chopped-up audio data onto remote
-	# this requires ssh authentication to my Stanford account (taken care of above), and for the AFS file
-	# system to be mounted (this you must do yourself)
-	# TODO: check for access to afs
-	# Chop up WAV into bits (phrase-sized)
-# 	echo `date -u`: "Chopping up utterances for creak detection..." >> "$PROJECT_INFO"
-# 	/Applications/Praat.app/Contents/MacOS/Praat ${SCRIPT_DIR}/save_labeled_intervals_to_wav_sound_files.praat "$BIGWAV" "$STRIPPEDTG" "$WAVWORKINGREMOTE" 1 0 0 3 0 1 0.025 >> "$PROJECT_INFO" 2>&1
-# 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-# 	# Creak detection
-# 	# copy creak-related scripts to remote (sigh)
-# 	scp -r "${SCRIPT_DIR}/creak_segmentation" pcallier@corn.stanford.edu:~/private/livingroom-util/ >> "$PROJECT_INFO" 2>&1
-# 	if [ $? -ne 0 ]; then echo "scp failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-# 	ssh pcallier@corn.stanford.edu <<ENDSSH
-# 		sleep 5
-# 		module load matlab
-# 		matlab -r "cd private/covarep; startup; cd ~/private/livingroom-util/creak_segmentation/; do_creak_detection('../wav_working/'); exit"
-# 		rm -rf ~/private/livingroom-util/creak_segmentation
-# 		logout
-# ENDSSH
-# 	echo `date -u`: "Done with creak segmentation." >> "$PROJECT_INFO"
-# 	# TODO: need some fancy error checking here
-# 	# decorate big textgrid with creak
-# 	/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/creak_segmentation/add_creak_info_to_tg.praat" "$STRIPPEDTG" "$WAVWORKINGREMOTE" 4 >> "$PROJECT_INFO" 2>&1
-# 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-# 	# Clean up
-# 	find ${WAVWORKINGREMOTE} -type f -delete
 
-	if [ ! -f $MEASUREMENTS_RESHAPED_PATH ]; then
-		if [ ! -f $MEASUREMENTS_DECORATED_PATH ]; then
-			if [ ! -f $MEASUREMENTS_WIDE_PATH ]; then
-				if [ ! -f $MEASUREMENTS_PATH ]; then
+
+	if [ ! -f "$MEASUREMENTS_RESHAPED_PATH" ]; then
+		if [ ! -f "$MEASUREMENTS_DECORATED_PATH" ]; then
+			if [ ! -f "$MEASUREMENTS_WIDE_PATH" ]; then
+				if [ ! -f "$MEASUREMENTS_PATH" ]; then
 					# split again, now for analysis (phone-sized)
 					echo `date -u`: "Chopping up into phone-sized chunks for analysis..." >> "$PROJECT_INFO"
 					# Praats deleting takes too long, use shell
-					find ${WAVWORKING} -type f -delete
+					find "${WAVWORKING}" -type f -delete
 					if [ $? -ne 0 ]; then echo "Find/delete failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 					/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/save_labeled_intervals_to_wav_sound_files.praat" "$BIGWAV" "$STRIPPEDTG" "$WAVWORKING" 1 0 0 1 1 1 0.025 >> "$PROJECT_INFO" 2>&1
 					if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi

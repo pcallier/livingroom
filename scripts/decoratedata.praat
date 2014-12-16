@@ -39,6 +39,8 @@ ip_tier = 3
 creak_tier = 4
 smile_tier = 5
 
+max_tiers = smile_tier
+
 level_'phone_tier'$ = "phone"
 level_'word_tier'$ = "word"
 level_'ip_tier'$ = "ip"
@@ -81,6 +83,7 @@ header_line$ = Get string: 1
 header_line$ = header_line$ + "	timepoint"
 select textgrid
 ntiers = Get number of tiers
+ntiers = min (ntiers, max_tiers)
 for tier_i from 1 to ntiers
 	is_interval = Is interval tier: tier_i
 	if is_interval <> 0
@@ -91,6 +94,7 @@ for tier_i from 1 to ntiers
 			header_line$ = header_line$ + "	word_segments"
 		endif
 		tier_name$ = level_'tier_i'$
+
 		header_line$ = header_line$ + "	'tier_name$'	start_'tier_name$'	end_'tier_name$'"
 	endif
 endfor
@@ -123,6 +127,8 @@ for line_i from 2 to nmeasures
 	cur_measure$ = cur_measure$ + tab$ + string$ (timepoint)
 	select textgrid
 	ntiers = Get number of tiers
+	ntiers = min (ntiers, max_tiers)
+
 	for tier_i from 1 to ntiers
 		is_interval = Is interval tier: tier_i
 		if is_interval <> 0

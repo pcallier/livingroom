@@ -42,23 +42,26 @@ echo `date -u`: "METADATA_PATH=$METADATA_PATH; RESULTS_DIR=$RESULTS_DIR; TGWORKI
 echo "Metadata at $METADATA_PATH" >> "$PROJECT_INFO"
 echo "Starting to read metadata..." >> "$PROJECT_INFO"
 
-sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER_ID INTERACTION_ID SURVEY_ID DATE FAMILIARITY ANGLE SPEAKER_FIRST SPEAKER_LAST GENDER WAV_PATH TG_PATH TRS_DATA_PATH; do
+sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER_ID INTERACTION_ID SURVEY_ID DATE FAMILIARITY ANGLE SPEAKER_FIRST SPEAKER_LAST GENDER WAV_PATH TG_PATH TRS_DATA_PATH MOV_PATH; do
 	UNIQUE_SPEAKER="${SPEAKER_ID}_INT${INTERACTION_ID}"
 	echo `date -u`: "Starting to work with ${UNIQUE_SPEAKER}..."  >> "$PROJECT_INFO"
 	BIGWAV=$WAV_PATH
 	TRSDATA=$TRS_DATA_PATH
 	TGFILE=$TG_PATH
+	MOVFILE=$MOV_PATH
 	#echo "'$SPEAKER_ID' '$INTERACTION_ID' '$SURVEY_ID' '$DATE' '$FAMILIARITY' '$ANGLE' '$SPEAKER_FIRST' '$SPEAKER_LAST' '$GENDER' '$WAV_PATH' '$TG_PATH' '$TRS_DATA_PATH'" >> "$PROJECT_INFO"
-	echo "BIGWAV=$BIGWAV; TRSDATA=$TRSDATA; TGFILE=$TGFILE"  >> "$PROJECT_INFO"
+	echo "MOVFILE=$MOVFILE; BIGWAV=$BIGWAV; TRSDATA=$TRSDATA; TGFILE=$TGFILE"  >> "$PROJECT_INFO"
 	# the results end up in the directory we specify (results/.working, which is hidden) with the name DATE_SPEAKER_SESSION_FAMILIARITY_ANGLE_pitchresults.txt
 	if [ "$GENDER" = "male" ]; then M_F="M"; else M_F="F"; fi
 	FILE_CODE="${DATE}_${SPEAKER_ID}${M_F}_${INTERACTION_ID}_${FAMILIARITY}_${ANGLE}"
 
-	MEASUREMENTS_PATH=${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_pitchresults.txt
-	MEASUREMENTS_WIDE_PATH=${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_pitchresults_wide.txt
-	MEASUREMENTS_DECORATED_PATH=${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_pitchresults_decorated.txt
-	MEASUREMENTS_RESHAPED_PATH=${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_pitchresults_reshaped.txt
-	MEASUREMENTS_FINAL_PATH=${RESULTS_DIR}/${FILE_CODE}.tsv
+	MEASUREMENTS_PATH="${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_pitchresults.txt"
+	MEASUREMENTS_WIDE_PATH="${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_pitchresults_wide.txt"
+	MEASUREMENTS_DECORATED_PATH="${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_pitchresults_decorated.txt"
+	MEASUREMENTS_SMILES_PATH="${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_pitchresults_smiles.txt"
+	MEASUREMENTS_RESHAPED_PATH="${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_pitchresults_reshaped.txt"
+	MEASUREMENTS_FINAL_PATH="${RESULTS_DIR}/${FILE_CODE}.tsv"
+	SMILES_MOVAMP_PATH="${RESULTS_DIR}/.working/${UNIQUE_SPEAKER}_smiles_movamp.txt"
 
 	# check to see if we already have results for this speaker
 	if [ -f "$MEASUREMENTS_FINAL_PATH" ]; then echo `date -u`: "Results exist for ${SPEAKER_ID}_INT${INTERACTION_ID}. Next..." >> "$PROJECT_INFO"; continue 1; fi
@@ -67,12 +70,26 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER_ID INTERACTION_ID SURVEY_ID
 	if [ -f "$BIGWAV" ]; then BIGWAV_READY=1; else BIGWAV_READY=0; fi
 	if [ -f "$TRSDATA" ]; then TRSDATA_READY=1; else TRSDATA_READY=0; fi
 	if [ -f "$TGFILE" ]; then TGFILE_READY=1; else TGFILE_READY=0; fi
+	if [ -f "$MOVFILE" ]; then MOVFILE_READY=1; else MOVFILE_READY=0; fi
+	
 	
 	if [ $BIGWAV_READY -eq 0 ] || [ $TRSDATA_READY -eq 0 ] || [ $TGFILE_READY -eq 0  ]; then
 		echo `date -u`: "Files not found; BIGWAV_READY=$BIGWAV_READY TRSDATA_READY=$TRSDATA_READY TGFILE_READY=$TGFILE_READY" >> "$PROJECT_INFO"
 		continue
-	fi	
-
+	fi
+	
+	if [ $MOVFILE_READY -eq 0 ]; then
+		echo `date -u`: "Movie file not found, smiles/movement amplitude will not be recorded" >> "$PROJECT_INFO"
+	else
+		# start the smiles detection in the background, if necessary
+		# we will wait for the results when the rest of the measurements finish for this file
+		echo -e "time\tsmile\tmovement_amplitude" > "$SMILES_MOVAMP_PATH"
+		if [ $MOVFILE_READY -ne 0 ]
+			python "${SCRIPT_DIR}/smiles_movamp/get_smiles.py" "MOVFILE" >> "$SMILES_MOVAMP_PATH" &
+			SMILES_PROCESS_ID=$!
+		fi
+	fi
+	
 	# this is the WORKING folder for TGs, not the original location (which is in TGFILE already)
 	# copy TG to working directory
 	STRIPPEDTG=${TGWORKING}/${FILE_CODE}.TextGrid
@@ -82,39 +99,50 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER_ID INTERACTION_ID SURVEY_ID
 
 	if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 
-	if [ ! -f $MEASUREMENTS_RESHAPED_PATH ]; then
-		if [ ! -f $MEASUREMENTS_DECORATED_PATH ]; then
-			if [ ! -f $MEASUREMENTS_WIDE_PATH ]; then
-				if [ ! -f $MEASUREMENTS_PATH ]; then
-					# split again, now for analysis (phone-sized)
-					echo `date -u`: "Chopping up utterances for analysis..." >> "$PROJECT_INFO"
-					# Praat's deleting takes too long, use shell
-					find ${WAVWORKING} -type f -delete
-					if [ $? -ne 0 ]; then echo "Find/delete failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-					/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/save_labeled_intervals_to_wav_sound_files.praat" "$BIGWAV" "$STRIPPEDTG" "$WAVWORKING" 1 0 0 1 1 1 0.025 >> "$PROJECT_INFO" 2>&1
-					if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
-					# run measurements script
-					echo `date -u`: "Starting measurements..." >> "$PROJECT_INFO"
-					/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/PraatVoiceSauceImitator.praat" "${SPEAKER_ID}_INT${INTERACTION_ID}" "$WAVWORKING" .wav  "$WAVWORKING" .TextGrid "${RESULTS_DIR}/.working" 1 0.025 0.025 0.010 10 "$GENDER" 500 550 1485 1650 2475 2750 >> "$PROJECT_INFO" 2>&1
-					if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_PATH}; continue; fi
-					echo `date -u`: "Done with measurements..." >> "$PROJECT_INFO"
+	if [ ! -f $MEASUREMENTS_SMILES_PATH ]; then
+		if [ ! -f $MEASUREMENTS_RESHAPED_PATH ]; then
+			if [ ! -f $MEASUREMENTS_DECORATED_PATH ]; then
+				if [ ! -f $MEASUREMENTS_WIDE_PATH ]; then
+					if [ ! -f $MEASUREMENTS_PATH ]; then
+						# split again, now for analysis (phone-sized)
+						echo `date -u`: "Chopping up utterances for analysis..." >> "$PROJECT_INFO"
+						# Praat's deleting takes too long, use shell
+						find ${WAVWORKING} -type f -delete
+						if [ $? -ne 0 ]; then echo "Find/delete failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+						/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/save_labeled_intervals_to_wav_sound_files.praat" "$BIGWAV" "$STRIPPEDTG" "$WAVWORKING" 1 0 0 1 1 1 0.025 >> "$PROJECT_INFO" 2>&1
+						if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+						# run measurements script
+						echo `date -u`: "Starting measurements..." >> "$PROJECT_INFO"
+						/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/PraatVoiceSauceImitator.praat" "${SPEAKER_ID}_INT${INTERACTION_ID}" "$WAVWORKING" .wav  "$WAVWORKING" .TextGrid "${RESULTS_DIR}/.working" 1 0.025 0.025 0.010 10 "$GENDER" 500 550 1485 1650 2475 2750 >> "$PROJECT_INFO" 2>&1
+						if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_PATH}; continue; fi
+						echo `date -u`: "Done with measurements..." >> "$PROJECT_INFO"
+					fi
+					echo `date -u`: "Converting to wide format..." >> "$PROJECT_INFO"
+					Rscript --slave "${SCRIPT_DIR}/long_to_wide.r" "$MEASUREMENTS_PATH" "$MEASUREMENTS_WIDE_PATH" >> "$PROJECT_INFO" 2>&1
+					if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_WIDE_PATH}; continue; fi
 				fi
-				echo `date -u`: "Converting to wide format..." >> "$PROJECT_INFO"
-				rscript --slave "${SCRIPT_DIR}/long_to_wide.r" "$MEASUREMENTS_PATH" "$MEASUREMENTS_WIDE_PATH" >> "$PROJECT_INFO" 2>&1
-				if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_WIDE_PATH}; continue; fi
+				echo `date -u`: "Adding extra information from text grid..." >> "$PROJECT_INFO"
+				/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/decoratedata.praat" "${MEASUREMENTS_WIDE_PATH}" "${STRIPPEDTG}" "${SURVEY_PATH}" "${SURVEY_ID}" "${MEASUREMENTS_DECORATED_PATH}" >> "$PROJECT_INFO" 2>&1
+				if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_DECORATED_PATH}; continue; fi
 			fi
-			echo `date -u`: "Adding extra information from text grid..." >> "$PROJECT_INFO"
-			/Applications/Praat.app/Contents/MacOS/Praat "${SCRIPT_DIR}/decoratedata.praat" "${MEASUREMENTS_WIDE_PATH}" "${STRIPPEDTG}" "${SURVEY_PATH}" "${SURVEY_ID}" "${MEASUREMENTS_DECORATED_PATH}" >> "$PROJECT_INFO" 2>&1
-			if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_DECORATED_PATH}; continue; fi
-		fi
 
-		# This takes wayyy too long
-		#echo `date -u`: "Adding extra niceties (almost done)..." >> "$PROJECT_INFO"
-		#rscript --slave "${SCRIPT_DIR}/reshapedata.r" "$MEASUREMENTS_DECORATED_PATH" "$MEASUREMENTS_RESHAPED_PATH" >> "$PROJECT_INFO" 2>&1
-		#if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+			# This takes wayyy too long
+			#echo `date -u`: "Adding extra niceties (almost done)..." >> "$PROJECT_INFO"
+			#rscript --slave "${SCRIPT_DIR}/reshapedata.r" "$MEASUREMENTS_DECORATED_PATH" "$MEASUREMENTS_RESHAPED_PATH" >> "$PROJECT_INFO" 2>&1
+			#if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
+		fi
+		# add smiles/movement amplitude (assuming they've been measured; if not, NAs will be added)
+		echo `date -u`: "Waiting for smiles/movement amplitude to wrap up..." >> "$PROJECT_INFO"
+		wait
+		
+		echo `date -u`: "Adding smiles/movement amplitude to table..." >> "$PROJECT_INFO"
+		Rscript --slave "${SCRIPT_DIR}/add_smiles_movamp.r" "$MEASUREMENTS_DECORATED_PATH" "$SMILES_MOVAMP_PATH" "$MEASUREMENTS_SMILES_PATH"
+		if [ $? -ne 0 ]; then echo "Rscript failed. Line ${LINENO}" >> "$PROJECT_INFO"; rm ${MEASUREMENTS_SMILES_PATH}; continue; fi
 	fi
+	
 	# clean-up, etc
-	cp $MEASUREMENTS_DECORATED_PATH $MEASUREMENTS_FINAL_PATH >> "$PROJECT_INFO" 2>&1
+	cp "$MEASUREMENTS_SMILES_PATH" "$MEASUREMENTS_FINAL_PATH" >> "$PROJECT_INFO" 2>&1
+	
 	find ${WAVWORKING} -type f -delete >> "$PROJECT_INFO" 2>&1
 	echo `date -u`: "Done with $UNIQUE_SPEAKER." >> "$PROJECT_INFO"
 done

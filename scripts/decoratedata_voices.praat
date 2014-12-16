@@ -163,6 +163,14 @@ for line_i from 2 to nmeasures
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "age"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "race"]
 	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "sexual_orientation"]
+	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "interlocutor_gender"]
+	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "enjoyed_self"]
+	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "felt_comfortable_self"]
+	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "we_clicked"]
+	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "set_them_up"]
+	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "finished_fouryear"]
+	survey_line$ = survey_line$ + tab$ + Table_r$ [which_line, "where_sat"]
+	
 	cur_measure$ = cur_measure$ + survey_line$
 	select measurements
 	Set string: line_i, cur_measure$

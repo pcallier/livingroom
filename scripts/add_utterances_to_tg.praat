@@ -32,7 +32,9 @@ tg = selected("TextGrid")
 n_tiers = Get number of tiers
 end_of_grid = Get end time
 
-Insert interval tier: n_tiers + 1, "Line"
+#changed behavior to always put Line on tier 3
+line_tier = 3
+Insert interval tier: line_tier, "Line"
 
 b = -1
 for line_i from 1 to n_lines
@@ -57,15 +59,15 @@ for line_i from 1 to n_lines
 	
 		if a <> undefined
 			# normal insertion
-			nocheck Insert boundary: n_tiers + 1, a
-			cur_int = Get interval at time: n_tiers + 1, a
+			nocheck Insert boundary: line_tier, a
+			cur_int = Get interval at time: line_tier, a
 		else
 			# no need to add an extra boundary
 			cur_int = cur_int + 1
 		endif
-		Set interval text: n_tiers+1, cur_int, line_text$
+		Set interval text: line_tier, cur_int, line_text$
 		if b <> end_of_grid
-			nocheck Insert boundary: n_tiers + 1, b
+			nocheck Insert boundary: line_tier, b
 		endif
 	else
 		# VOC-style XML formatting, assuming order of start, end, speaker, text (and each record
@@ -92,16 +94,16 @@ for line_i from 1 to n_lines
 	
 			if a <> undefined
 				# normal insertion
-				nocheck Insert boundary: n_tiers + 1, a
-				cur_int = Get interval at time: n_tiers + 1, a
+				nocheck Insert boundary: line_tier, a
+				cur_int = Get interval at time: line_tier, a
 			else
 				# no need to add an extra boundary
 				#printline Cur int: 'cur_int'
 				cur_int = cur_int + 1
 			endif
-			Set interval text: n_tiers+1, cur_int, line_text$
+			nocheck Set interval text: line_tier, cur_int, line_text$
 			if b <> end_of_grid
-				nocheck Insert boundary: n_tiers + 1, b
+				nocheck Insert boundary: line_tier, b
 			endif		
 		endif
 	endif
