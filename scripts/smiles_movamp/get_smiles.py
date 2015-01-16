@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # hello and welcome to this poorly documented script 
 # what it tries to do is calculate movement amplitude and smiling/notsmiling for every frame
 # and prints to stdout the following:
@@ -6,7 +7,7 @@
 # usage: python get_smiles.py [video_file]
 # 
 
-import cv2, os, random, sys, math
+import cv2, os, random, sys
 import numpy as np
 
 # input file
@@ -31,11 +32,17 @@ frame_num = -1
 prior_frame = ''
 times, mas, smilevals = [], [], []
 
-while True:
+# total_frames = int(cap.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+
+while True: 
     frame_num += 1
+
+#     if frame_num < total_frames - 50:
+#     	cap.grab()
+#         continue
+
     ret, frame = cap.read()
-    #if frame_num < 5000: continue
-    #if frame_num == 5100: break
+    
     try:
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     except:
@@ -60,7 +67,7 @@ while True:
     if prior_frame != '':
         diff = frame_gray - prior_frame
         MA = np.log(np.sum(np.absolute(diff)))
-        if math.isnan(MA):
+        if np.isnan(MA):
             print >> sys.stderr, 'Error on frame %i' %frame_num
             raise Exception('FUCK THE WORLD IS PAIN')
         mas.append(MA)
@@ -71,8 +78,9 @@ while True:
 
 cap.release()
 
-ma_mean = np.mean(mas)
-ma_std = np.std(mas)
+mas_no_inf = np.ma.masked_invalid(mas)
+ma_mean = np.mean(mas_no_inf)
+ma_std = np.std(mas_no_inf)
 zscore_mas = [(x - ma_mean)/ma_std for x in mas]
 
 for t, m, s in zip(times, zscore_mas, smilevals):
