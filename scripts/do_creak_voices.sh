@@ -51,6 +51,8 @@ fi
 
 SCRIPT_DIR=$(dirname "${0}")
 PROJECT_INFO="${SCRIPT_DIR}/creak_errors.log"
+IP_FALLBACK_PATH="/afs/ir.stanford.edu/users/p/c/pcallier/private/creak_wavs/voc_ipsurrogate.tsv"
+alias praat="/Applications/Praat.app/Contents/MacOS/Praat"
 
 # check for access to afs
 echo -n "SUNet ID: "
@@ -107,10 +109,20 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
 	fi	
 
 	NUM_TIERS=`/Applications/Praat.app/Contents/MacOS/Praat ${SCRIPT_DIR}/utilities/get_num_tiers.praat "$STRIPPEDTG"`
-	if [ "$NUM_TIERS" -lt 3 ]; then echo "Not enough tiers in input TextGrid." >> "$PROJECT_INFO"; continue; fi
+	if [ "$NUM_TIERS" -lt 3 ]; then 
+		echo "Not enough tiers in input TextGrid." >> "$PROJECT_INFO"
+		if [ "$NUM_TIERS" -lt 2 ]; then
+			continue
+		else
+			echo "Falling back to voc_ipsurrogate.tsv for phrasing information." >> "$PROJECT_INFO"
+			USE_IP_FALLBACK=1
+		fi
+	else
+	    USE_IP_FALLBACK=0
+	fi
 	
 	NUM_UTTERANCES=`/Applications/Praat.app/Contents/MacOS/Praat ${SCRIPT_DIR}/utilities/get_num_intervals.praat "$STRIPPEDTG" 3`
-	if [ "$NUM_UTTERANCES" -eq 1 ]; then echo "No utterance data in input TextGrid." >> "$PROJECT_INFO"; continue; fi
+	if [ "$NUM_UTTERANCES" -eq 1 ]; then echo "No utterance data in input TextGrid, switching to fallback phrasing." >> "$PROJECT_INFO"; USE_IP_FALLBACK=1; fi
 	
 	if [ -f "${RESULTS_PATH}/${SPEAKER}.TextGrid" ]; then
 	    echo "Results exist for $SPEAKER" >> "$PROJECT_INFO"
@@ -122,13 +134,19 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
         if [ $? -ne 0 ]; then echo "Unable to create wav directory for speaker" >> "$PROJECT_INFO"; continue; fi
     fi
     
+    if [ USE_IP_FALLBACK -eq 1 ]; then
+        # make a temporary textgrid that has the phrasing from voc_ipsurrogate.tsv
+        praat "${SCRIPT_DIR}/utilities/add_phrases_from_timing.praat" "$SPEAKER" "$IP_FALLBACK_PATH" "$STRIPPEDTG" "${TEXTGRID_PATH}/.fallback.TextGrid"
+        STRIPPEDTG="${TEXTGRID_PATH}/.fallback.TextGrid"
+    fi
+    
     if [ ! -f "${REMOTE_PATH}/${WAV_WORKING}/${SPEAKER}/.done" ]; then
      	if [ ! -f "${REMOTE_PATH}/${WAV_WORKING}/${SPEAKER}/.ready" ]; then
 			echo "Speaker ${SPEAKER} is not done, not ready." >> "$PROJECT_INFO"
 			# check how much space is left
 			if [ "$QUOTA" -lt "4500" ]; then
 				echo `date -u`: "Chopping up utterances for creak detection..." >> "$PROJECT_INFO"
-				/Applications/Praat.app/Contents/MacOS/Praat ${SCRIPT_DIR}/save_labeled_intervals_to_wav_sound_files.praat "$BIGWAV" "$STRIPPEDTG" "${REMOTE_PATH}/${WAV_WORKING}/${SPEAKER}" 1 0 0 3 0 0 0.025 >> "$PROJECT_INFO" 2>&1
+				praat ${SCRIPT_DIR}/save_labeled_intervals_to_wav_sound_files.praat "$BIGWAV" "$STRIPPEDTG" "${REMOTE_PATH}/${WAV_WORKING}/${SPEAKER}" 1 0 0 3 0 0 0.025 >> "$PROJECT_INFO" 2>&1
 				if [ $? -ne 0 ]; then echo "Praat failed. Line ${LINENO}" >> "$PROJECT_INFO"; continue; fi
 				touch "${REMOTE_PATH}/${WAV_WORKING}/${SPEAKER}/.ready"
 				ADDED_SIZE=`du -I ".*" -kd 0 "${REMOTE_PATH}/${WAV_WORKING}/${SPEAKER}" | awk '{ total += $1 }; END { print total }'` 2>&0
@@ -148,6 +166,7 @@ sed 1d $METADATA_PATH | while IFS=$'\t' read SPEAKER GENDER LOCATION AGE RACE SE
         # Clean up
         rm -rf "${REMOTE_PATH}/${WAV_WORKING}/${SPEAKER}"
         if [ $? -ne 0 ]; then echo "Cleanup on aisle ${SPEAKER}" >> "$PROJECT_INFO"; continue; fi
+        if [ USE_IP_FALLBACK -eq 1 ]; then rm -f "${TEXTGRID_PATH}/.fallback.TextGrid";  fi
     fi
 done
 echo "All done. If you don't have your results yet, make sure that creak_batch.sh is running as a cron job on your remote. You can also invoke it yourself."

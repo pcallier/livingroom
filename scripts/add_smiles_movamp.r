@@ -12,7 +12,7 @@
 # corresponding timepoint in the smiling/movement amp. table 
 #
 # This is appropriate for measurement tables that have measurements at
-# regular timepoints. It also has a method which is appropriate
+# regular timepoints. It also has a (yet-to-be-implemented) method which is appropriate
 # for annotating inputs which have been reduced to summaries over 
 # irregularly sized intervals, which has parameters for what percentage
 # of an interval's duration should be smiled for the interval to count
