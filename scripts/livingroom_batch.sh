@@ -101,7 +101,7 @@ sed 1d "$SURVEY_PATH" | while IFS=$'\t' read lastname firstname user_id internal
 	else
 		# start the smiles detection in the background, if necessary
 		# we will wait for the results when the rest of the measurements finish for this file
-		echo -e "time\tsmile\tmovement_amplitude" > "$SMILES_MOVAMP_PATH"
+		echo -e "time\tmovement_amplitude\tsmile" > "$SMILES_MOVAMP_PATH"
 		if [ $MOVFILE_READY -ne 0 ] && [ ! -f $SMILES_DONE_PATH ]; then
 			echo `date -u`: "Starting movement amplitude, smiling measurements" >> "$PROJECT_INFO"
 			python "${SCRIPT_DIR}/smiles_movamp/get_smiles.py" "$MOVFILE" >> "$SMILES_MOVAMP_PATH" &
