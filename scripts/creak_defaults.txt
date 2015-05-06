@@ -1,1 +1,0 @@
-./do_creak_voices.sh /Volumes/Surfer/users/pcallier/voc/creak_textgrids /afs/.ir/users/p/c/pcallier/private/creak_wavs /Volumes/Surfer/users/pcallier/voc/ca_voice_quality_sample.txt /Volumes/Surfer/users/pcallier/voc/text_spkr_only

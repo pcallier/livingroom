@@ -1,2 +1,0 @@
-speaker_id	interaction_id	survey_id	date	familiarity	angle	speaker_first	speaker_last	gender	wav_path	tg_path	trs_data_path
-008	010	5757487680585728	20140512	FAM	CHA	Sasha	Perigo	female	/Volumes/data_drive/corpora/living_room/data/audio/20140512_008F_INT010_FAM_CHA_result.wav	/Volumes/data_drive/corpora/living_room/data/annotations/20140512_008F_INT010_FAM_CHA.TextGrid	/Volumes/data_drive/corpora/living_room/data/annotations/20140512_008F_INT010_FAM_CHA.txt
