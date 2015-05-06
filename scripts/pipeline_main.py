@@ -10,47 +10,22 @@ compatible local fallback), choose which speakers to analyze,
 and of course set the path to audio recordings, alignment 
 TextGrids, video recordings (optional), and metadata table (also optional, I think?)
 
-Depends: pandas, numpy, scipy.signal. Should have VoiceSauce installed, but a praat-
-compatible fallback is also included.
+Depends: pandas, numpy, scipy.signal. A compatible praat should be placed in the scripts/
+directory
 
 Output: one table, with acoustic measurements, unique speaker/session IDs, and whatever 
 metadata are available"""
 
-# challenges: metadata formats change-- Qualtrics output is not necessarily stable
-# and VoiceSauce output is in a different format than PraatVoiceSauceImitator;
-# metadata (including unique speaker-session ID info) is different between corpus types;
-# translating Qualtrics data is not trivial; raw Qualtrics output is not necessarily
-# linked to Google Drive metadata
-
-# Step 1: identify cases to be analyzed
-#   then, for each case:
-# Step 2: dispatch creak detection in its own process
-# Step 3: dispatch smiles detection/other CV rigamarole in its own process
-# Step 4: divide up sound files, dispatch VoiceSauce/VoiceSauceImitator
-# Step 5: wait for everybody to wrap up, add results together 
-# Step 6: reduce measurements by taking median of every point measurement in the unit (phone)
-#           and the extent of every durational measurement
-# Step 7: add observation metadata: phone label, timestamps, word label, timestamps, IP label,
-#               timestamps + unique IDs
-# Step 8: concatenate to results file
-
-# Metadata:
-# Step X: identify metadata for each case (options to include survey, consent metadata, or not)
-#               if metadata is incomplete or ambiguous, raise an error or give a warning
-# Step X1: consolidate metadata for each case
-# Step X2: add metadata to appropriate rows in results table
-
 import sys
 import os
 import re
-import numpy as np
-import scipy.io as sp_io
 import StringIO
 import logging
 logging.basicConfig(level=logging.DEBUG)
 logging.root.setLevel(logging.DEBUG)
-#import scipy.signal as sig
-import pandas as pd
+
+import numpy as np
+import scipy.io as sp_ioimport pandas as pd
 import acoustic_analysis_livingroom as acous
 from smiles_movamp.get_smiles import do_smiles_movamp, face_file, smile_file
 from praat_utilities import textgrid_table
