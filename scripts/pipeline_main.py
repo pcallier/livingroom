@@ -23,6 +23,7 @@ import StringIO
 import logging
 logging.basicConfig(level=logging.DEBUG)
 logging.root.setLevel(logging.DEBUG)
+import distutils
 
 import numpy as np
 import scipy.io as sp_ioimport pandas as pd
@@ -37,6 +38,7 @@ livingroom_filename_pattern = r"^(\d{8})_(INT\d{3})_(\d{3})([MF]?)_(FAM|STR)_(CH
 unique_id_pattern = r"^(INT\d{3})_(\d{3})$"
 livingroom_root = "/Volumes/Surfer/corpora/living_room/data/"
 creak_tmp_dir = "/Volumes/Surfer/users/pcallier/creak_results"
+tmp_results_dir = ".working"
 
 def do_creak_detection(creak_results_path):
     """right now, the creak detection runs independently in a VM, so all this step
@@ -74,6 +76,13 @@ def value_in_which_interval(value, lower, upper, return_all=False):
             return list(np.where(pd.concat([lower < value, upper > value], axis=1).all(1))[0])[0]
         except IndexError:
             return None
+
+
+def working_dir():
+    tmp_path = os.path.realpath(tmp_results_dir)
+    if not os.path.isdir(tmp_path):
+        distutils.dir_util.mkpath(tmp_path)
+    return tmp_path
             
 def add_offsets(df,audio_dir):
     """Takes a df where speaker_session_id, session_id, and interlocutor_id and 
@@ -106,14 +115,21 @@ def add_offsets(df,audio_dir):
     
     return df
     
-    
-
-    
+        
 def case_pipeline(unique_id, audio_path, alignments_path, video_path=None, 
                   transcript_path=None, do_creak=True, do_cv=True, do_acoustic=True, 
                   creak_results_dir=creak_tmp_dir):
-    logging.info(unique_id)
-    logging.info("Audio at {audio}; alignments at {alignments}".format(audio=audio_path, alignments=alignments_path))
+    logging.info("Case pipeline: " + unique_id)
+
+    working_table_path = os.path.join(working_dir(), unique_id + ".tsv")
+    try:
+        acous_df = pd.read_table(working_table_path, sep="\t")
+        return acous_df
+    except:
+        logging.info("No results yet exist for {}".format(unique_id), exc_info=True)
+
+    logging.info("Audio at {audio}; alignments at {alignments}".format(
+        audio=audio_path, alignments=alignments_path))
     results_dict = {}
     if do_creak:
         logging.info("Doing creak detection")
@@ -160,7 +176,7 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         acous_df['segment_original_midpoint'] = acous_df['segment_original_timestamp'] + (acous_df['Segment end'] - acous_df['Segment start']) / 2
         acous_df['chunk_original_timestamp'] = acous_df['segment_original_timestamp'] + acous_df['Window_start']
         
-    # combine if necessary/possible
+    # combine acoustics with cv, metadata if necessary/possible
     # CV results
     try:
         # interpolate values of movamp and smile according to time
@@ -225,10 +241,13 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         acous_df = pd.concat([acous_df, matching_lines], 1)
     except IOError:
         logging.debug("Unable to retrieve transcript data", exc_info=True)
-        pass
         
+    # save a copy in the temporary directory
+    acous_df.to_csv(working_table_path, sep="\t")
+    
     return acous_df
     
+
 def get_cases_from_directory(case_path, case_filename_pattern=livingroom_filename_pattern, case_id_pattern=r"\2_\3"):
     """return a list of unique case IDs ('INTYYY_XXX') based on files matching 
     the regex in case_filename_pattern in the directory given in case_path"""
@@ -239,6 +258,7 @@ def get_cases_from_directory(case_path, case_filename_pattern=livingroom_filenam
                     file_list if case_filename_re.search(filename) != None ]
     return case_list
     
+
 def unique_id_to_data_path(unique_id, data_dir=livingroom_root + "audio", data_filename_pattern=livingroom_pattern_template + ".(wav)$"):
     """Translates a unique ID (INTXXX_YYY) where XXX is a session ID and YY is a user ID
     into a full path containing the first filename in data_dir that meets the criteria
@@ -259,6 +279,7 @@ def unique_id_to_data_path(unique_id, data_dir=livingroom_root + "audio", data_f
         return os.path.join(data_dir, data_file_list[0])
     else:
         return None
+
 
 def unique_id_to_audio_path(unique_id, data_dir=livingroom_root + "audio"):
     return unique_id_to_data_path(unique_id, data_dir=data_dir, data_filename_pattern=
@@ -301,7 +322,8 @@ def directory_pipeline(video_path=livingroom_root + "video",
 
     return results
      
-def main():
+
+def stump_main():
     results = directory_pipeline(video_path="../../data/stump/video",
         audio_path="../../data/stump/audio",
         alignments_path="../../data/stump/annotations")
@@ -316,7 +338,25 @@ def main():
         "livingroom/livingroom/scripts/utilities/sessioninfoheadings.txt"))
     results = add_offsets(results)
     
-    return results
+    return results.to_csv(None, sep="\t", encoding="utf-8")
+
+
+def main():
+    results = directory_pipeline()
+    results = adorn_with_session_info(results,
+        ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+        "Living_Room_Participant_Survey.csv"),
+        ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+        "livingroom/scripts/utilities/qualtricsheadings.txt"),
+        ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+        "Session_Information_Post.csv"),
+        ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+        "livingroom/scripts/utilities/sessioninfoheadings.txt"))
+    results = add_offsets(results)
     
+    return results   
+
+
 if __name__ == '__main__':
-    main()
+    results = main()
+    print results
