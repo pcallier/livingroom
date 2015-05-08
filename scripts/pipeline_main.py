@@ -6,7 +6,7 @@ Patrick Callier
 
 Main entry point for the analysis pipeline. Has options to select corpus type (Living Room
 dyads vs or Voices of California), set the path to praat (defaults to a BSD/Linux-
-compatible local fallback), choose which speakers to analyze,
+compatible local fallback, which should be in this folder), choose which speakers to analyze,
 and of course set the path to audio recordings, alignment 
 TextGrids, video recordings (optional), and metadata table (also optional, I think?)
 
@@ -23,10 +23,11 @@ import StringIO
 import logging
 logging.basicConfig(level=logging.DEBUG)
 logging.root.setLevel(logging.DEBUG)
-import distutils
+import distutils.dir_util
 
 import numpy as np
-import scipy.io as sp_ioimport pandas as pd
+#import scipy.io as sp_io
+import pandas as pd
 import acoustic_analysis_livingroom as acous
 from smiles_movamp.get_smiles import do_smiles_movamp, face_file, smile_file
 from praat_utilities import textgrid_table
@@ -36,8 +37,8 @@ from utilities.get_offset import get_offset_wav
 livingroom_pattern_template = r"^(\d{8})_SESSION_USER([MF]?)_(FAM|STR)_(CHA|SOF)"
 livingroom_filename_pattern = r"^(\d{8})_(INT\d{3})_(\d{3})([MF]?)_(FAM|STR)_(CHA|SOF).(wav|mov|eaf)$"
 unique_id_pattern = r"^(INT\d{3})_(\d{3})$"
-livingroom_root = "/Volumes/Surfer/corpora/living_room/data/"
-creak_tmp_dir = "/Volumes/Surfer/users/pcallier/creak_results"
+livingroom_root = "/Volumes/data_drive/corpora/living_room/data/"
+creak_tmp_dir = "/Volumes/Surfer/users/pcallier/livingroom/creak_results"
 tmp_results_dir = ".working"
 
 def do_creak_detection(creak_results_path):
@@ -126,21 +127,29 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         acous_df = pd.read_table(working_table_path, sep="\t")
         return acous_df
     except:
-        logging.info("No results yet exist for {}".format(unique_id), exc_info=True)
+        logging.debug("No results yet exist for {}".format(unique_id))
 
-    logging.info("Audio at {audio}; alignments at {alignments}".format(
-        audio=audio_path, alignments=alignments_path))
+    logging.debug(("Audio at {audio};\nAlignments at {alignments}\n"
+                  "Video at {video}\nTranscript at {transcript}").format(
+        audio=audio_path, alignments=alignments_path, video=video_path,
+        transcript=transcript_path))
     results_dict = {}
     if do_creak:
         logging.info("Doing creak detection")
         try:
-            creak_results = do_creak_detection(creak_results_dir)
+            creak_results = do_creak_detection(
+                unique_id_to_data_path(unique_id, creak_results_dir, 
+                livingroom_pattern_template + ".(tsv)$")
+        except KeyboardInterrupt:
+            raise
         except:
             logging.error("Creak detection failed", exc_info=True)
     if do_cv:
         logging.info("Doing computer vision")
         try:
             cv_results = do_cv_annotation(video_path)
+        except KeyboardInterrupt:
+            raise
         except:
             logging.error("Computer vision failed", exc_info=True)
 
@@ -259,7 +268,8 @@ def get_cases_from_directory(case_path, case_filename_pattern=livingroom_filenam
     return case_list
     
 
-def unique_id_to_data_path(unique_id, data_dir=livingroom_root + "audio", data_filename_pattern=livingroom_pattern_template + ".(wav)$"):
+def unique_id_to_data_path(unique_id, data_dir=livingroom_root + "audio", 
+                           data_filename_pattern=livingroom_pattern_template + ".(wav)$"):
     """Translates a unique ID (INTXXX_YYY) where XXX is a session ID and YY is a user ID
     into a full path containing the first filename in data_dir that meets the criteria
     specified in the template regex data_filename_pattern. The strings USER and SESSION 
