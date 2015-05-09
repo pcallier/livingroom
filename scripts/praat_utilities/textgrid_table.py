@@ -5,7 +5,7 @@ import subprocess
 import itertools
 
 
-def get_table_from_tg(textgrid_path, target_tier, other_tiers=None, praat_path = "./praat",
+def get_table_from_tg(textgrid_path, target_tier, other_tiers=None, praat_path = "praat",
 utilities_path = "praat_utilities/"):
     """ From the TextGrid in texgrid_path find which of the other 
     tiers in other_tiers overlap the midpoint of each nonempty interval in target_tier
