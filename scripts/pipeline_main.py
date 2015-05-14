@@ -183,13 +183,20 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
             logging.error("Creak detection failed", exc_info=True)
     if do_cv:
         logging.info("Doing computer vision")
+        cv_table_path = os.path.join(working_dir(), unique_id + "_cv.tsv")
         try:
-            cv_results = do_cv_annotation(video_path)
+            cv_results = zip(*pd.read_table(cv_table_path, sep='\t').values.tolist())
             results_dict['cv'] = cv_results
-        except KeyboardInterrupt:
-            raise
-        except:
-            logging.error("Computer vision failed", exc_info=True)
+        except IOError:
+            try:
+                cv_results = do_cv_annotation(video_path)
+                results_dict['cv'] = cv_results
+                pd.DataFrame(cv_results, columns=['time','movamp','smile']).to_csv(
+                    cv_table_path, sep='\t')
+            except KeyboardInterrupt:
+                raise
+            except:
+                logging.error("Computer vision failed", exc_info=True)
 
     # presumably every call to the case pipeline will request acoustic measurements, so right 
     # now the behavior of the pipeline is mostly defined in this conditional
@@ -269,10 +276,11 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
             (alignments_table['segment_end'] - alignments_table['segment_start']) / 2
         # this method checks where segment midpoints fall, may be slow
         words_table = alignments_table.loc[:,['word_start','word_end','word_label']].drop_duplicates()
-        segment_indices = [ value_in_which_interval(midpt, 
-            words_table['word_start'].astype(float), words_table['word_end'].astype(float)) for midpt in
-            acous_df['segment_original_midpoint'] ]
-        matching_words = words_table.iloc[segment_indices,:].set_index(acous_df.index)
+        segment_indices = pd.Series([ value_in_which_interval(midpt, 
+            words_table['word_start'].astype(float), 
+            words_table['word_end'].astype(float)) for midpt in
+            acous_df['segment_original_midpoint'] ], index=acous_df.index).dropna()
+        matching_words = words_table.iloc[segment_indices,:].set_index(segment_indices.index)
         logging.debug(acous_df.shape)
         logging.debug(matching_words.shape)
         acous_df = pd.concat([acous_df, matching_words], 1)
@@ -287,13 +295,18 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
                 names=['speaker','speaker','line_start','line_end','line_label'])
             trs_start = transcript_table.iloc[:,transcript_start_col]
             trs_end = transcript_table.iloc[:,transcript_end_col]
-            trs_indices = [ value_in_which_interval(midpt, trs_start, trs_end)
-                for midpt in acous_df['segment_original_midpoint'] ]
+            trs_indices = pd.Series([ value_in_which_interval(midpt, trs_start, trs_end)
+                for midpt in acous_df['segment_original_midpoint'] ], 
+                index=acous_df.index).dropna()
         
+            logging.debug("{} matching lines from transcript".format(len(trs_indices)))
+            logging.debug(trs_indices[200:205])
+            logging.debug("{} rows, {} columns in transcript table".format(
+                transcript_table.shape[0],transcript_table.shape[1]))
             matching_lines = transcript_table.iloc[trs_indices, 
                     [transcript_start_col, transcript_end_col, 
-                    transcript_text_col]].set_index(acous_df.index)
-            acous_df = pd.concat([acous_df, matching_lines], 1)
+                    transcript_text_col]].set_index(trs_indices.index)
+            acous_df = pd.concat([acous_df, matching_lines], axis=1)
         except IOError:
             logging.debug("Unable to retrieve transcript data", exc_info=True)
         
@@ -372,7 +385,7 @@ def directory_pipeline(video_path=livingroom_root + "video",
         transcript_path=unique_id_to_transcript_path(case_id,alignments_path),
         creak_results_path=unique_id_to_data_path(case_id, creak_tmp_dir, 
                 livingroom_pattern_template + ".(txt)$"),
-        do_creak=True, do_cv=False, do_acoustic=True)) for case_id in case_list ])
+        do_creak=True, do_cv=True, do_acoustic=True)) for case_id in case_list ])
     
     # add unique identifier and split into speaker and session ID fields as well
     results = pd.concat([ pd.concat([pd.Series(key, index=df.index, 

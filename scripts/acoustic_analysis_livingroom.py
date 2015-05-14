@@ -11,6 +11,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 import distutils.dir_util
 import shutil
+import time
 
 def do_acoustic_annotation(audio_path, alignments_path, 
                            working_wav_dir=".tmpwav"):
@@ -19,14 +20,25 @@ def do_acoustic_annotation(audio_path, alignments_path,
     """
     
     # empty out and create tmp WAV folder (DANGER)
+    logging.debug("Working dir: {}".format(working_wav_dir))
     if working_wav_dir in (".", "/"):
         raise Exception(("Working WAV directory must be deleted" 
                          "but I must not delete {}").format(working_wav_dir))
-    shutil.rmtree(working_wav_dir, ignore_errors=True)
-    distutils.dir_util.mkpath(os.path.realpath(working_wav_dir))
-    
+    while os.path.isdir(working_wav_dir):
+        shutil.rmtree(working_wav_dir, ignore_errors=True)
+        time.sleep(1)
+    while not os.path.isdir(working_wav_dir):
+        logging.debug("Attempting to create {}:".format(os.path.realpath(working_wav_dir)))
+        os.mkdir(os.path.realpath(working_wav_dir))
+        time.sleep(1)
+    logging.info("Re-created working folder")
+
+    logging.info("Dividing files")
     split_audio(audio_path, alignments_path, working_wav_dir)
+    
+    logging.info("Doing acoustic measurements")
     results = invoke_praat_voice_analysis(working_wav_dir)
+    
     return results
     
 def split_audio(audio_path, alignments_path, destination_dir):
@@ -64,7 +76,7 @@ def invoke_praat_voice_analysis(audio_directory):
             f1ref=550, f2ref=1650, f3ref=2750, f4ref=3850, f5ref=4950,        
             maxformant=5500,
             min_f0=50, max_f0=500)
-    logging.warning("Analysis arguments: " + praat_args)
+    logging.info("Analysis arguments: " + praat_args)
     
     output = subprocess.check_output( \
         ["praat", "utilities/praat_voice_measures.praat", praat_args])
