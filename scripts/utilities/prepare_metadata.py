@@ -12,12 +12,29 @@ def is_same_day(date1, date2):
     return(date1.year == date2.year and date1.month == date2.month and 
             date1.day == date2.day)
 
+def normalize_id(x):
+    try:
+        id = "{:03d}".format(
+            long(float(filter(lambda(y): str.isdigit(y) or y==".", str(x)))))
+    except ValueError:
+        id = pd.np.nan
+    logging.debug("in: {}, out: {}".format(x, id))
+    return id
+    
 def prepare_qualtrics(qualtrics_path, qualtrics_header_path="qualtricsheadings.txt"):
     with open(qualtrics_header_path) as qheader_file:
         qualtrics_header = qheader_file.read().strip().split(",")
         
     qualtrics_table = pd.read_table(qualtrics_path,sep=",",skiprows=[0,1],header=None,
                                     names=qualtrics_header)
+                                    
+    # normalize ID fields, if present
+    id_fields = [id_field for id_field in 
+        ['SessionID','ParticipantOneID','ParticipantTwoID','ParticipantID'] 
+        if id_field in qualtrics_table.columns]
+    for id_field in id_fields:
+        qualtrics_table[id_field] = map(normalize_id, qualtrics_table[id_field])
+            
     return qualtrics_table
 
                          
@@ -43,6 +60,8 @@ def adorn_with_session_info(df, exit_survey_path, exit_survey_header_path,
         exit_survey[['SessionID','ParticipantID']].where(
             pd.isnull(exit_survey[['SessionID', 'ParticipantID']])==False,
             exit_survey_alternates[['SessionID', 'ParticipantID']])
+    logging.debug(exit_survey['SessionID'].values)
+    
     
     # main loop for adding metadata, iterates over unique speaker/session pairs
     # The idea is to build up a one-row data frame with all the metadata for each 
@@ -54,11 +73,18 @@ def adorn_with_session_info(df, exit_survey_path, exit_survey_header_path,
         # add session-level metadata
         # find speaker name
         # note that 0-row data frame must be assigned to with iterable type
-        speaker_session_df['session_id'] = [long(speaker_session['session_id'])]
-        speaker_session_df['speaker_id'] = long(speaker_session['speaker_id'])
+        speaker_session_df['session_id'] = [speaker_session['session_id']]
+        speaker_session_df['speaker_id'] = speaker_session['speaker_id']
         
+        logging.debug("Session IDs: {}".format(session_info['SessionID'].values))
+        logging.debug("Session ID: {}".format(speaker_session_df['session_id'].values))
         current_session_info = session_info[session_info['SessionID'].values == 
                                             speaker_session_df['session_id'].values]
+
+        logging.debug("Spkr ID: {}\nPrtcpt One ID: {}\nPrtcpt Two ID: {}".format(
+                        speaker_session_df['speaker_id'],
+                        current_session_info['ParticipantOneID'],
+                        current_session_info['ParticipantTwoID']))
 
         # find names of participant, and names + ID of interlocutor
         if speaker_session_df['speaker_id'].values == current_session_info['ParticipantOneID'].values:
@@ -75,7 +101,9 @@ def adorn_with_session_info(df, exit_survey_path, exit_survey_header_path,
             speaker_session_df['interlocutor_last'] = str(current_session_info['ParticipantOneLastName'].values[0])
         else:
             logging.warning("Session information not found for speaker {}, session {}".
-                            format(speaker_id, session_id))
+                            format(speaker_session['speaker_id'], 
+                                   speaker_session['session_id']))
+            raise Exception()
             
         # clean up ID numbers (format as 3-digit zero-padded)
         speaker_session_df['speaker_id'] = speaker_session_df['speaker_id'].map(
@@ -87,9 +115,12 @@ def adorn_with_session_info(df, exit_survey_path, exit_survey_header_path,
         
         # add exit_survey metadata
         # acquire this speaker's row from exit_survey, add to speaker_session_df
-        exit_survey_row = exit_survey[
-            (exit_survey['ParticipantID'].values==speaker_session_df['speaker_id'].values) &
-            (exit_survey['SessionID'].values==speaker_session_df['session_id'].values)]
+        matching_exit_rows = (exit_survey['ParticipantID'].values==
+                              speaker_session_df['speaker_id'].values) & \
+            (exit_survey['SessionID'].values==speaker_session_df['session_id'].values)
+        logging.debug("Number of matching rows from exit survey: {}".format(
+            sum(matching_exit_rows)))
+        exit_survey_row = exit_survey[matching_exit_rows]
 
         exit_survey_row.index = speaker_session_df.index
         speaker_session_df = pd.concat([speaker_session_df, exit_survey_row], axis=1)

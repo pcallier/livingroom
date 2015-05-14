@@ -84,7 +84,7 @@ def do_smiles_movamp(test_file, data_dir, face_file, smile_file):
     ma_std = np.std(mas_no_inf)
     zscore_mas = [(x - ma_mean)/ma_std for x in mas]
 
-    return zip(times, zscore_mas, smilevals)
+    return [times, zscore_mas, smilevals]
 
 
 
