@@ -128,7 +128,70 @@ def add_offsets(df,audio_dir):
     
     return df
 
-       
+def add_alignments_to_acoustic(df,alignments_path):
+    """Takes output of acoustic measurement step, having at least column
+    'segment_original_midpoint', and a path (alignments_path) to a TextGrid
+    containing phonetic alignments for the appropriate audio.
+    
+    Merges phone- and word-level metadata from alignments with acoustic 
+    measurements and returns the result."""
+    
+    phone_tier = 1
+    word_tier = 2
+    
+    # get data from alignment
+    logging.info("Getting data from alignments table")
+    # phones and words
+    alignments_table = pd.DataFrame(textgrid_table.get_table_from_tg(
+            alignments_path, phone_tier, other_tiers=[word_tier], 
+            utilities_path=os.path.join(script_dir, "praat_utilities")), 
+        columns=['segment_label', 'segment_start', 'segment_end', 
+                 'word_label', 'word_start', 'word_end'])
+
+    alignments_table['segment_start'] = alignments_table['segment_start'].astype(float)
+    alignments_table['segment_end'] = alignments_table['segment_end'].astype(float)
+    alignments_table['segment_midpoint'] = alignments_table['segment_start'] + \
+        (alignments_table['segment_end'] - alignments_table['segment_start']) / 2
+    # this method checks where segment midpoints fall, may be slow
+    words_table = alignments_table.loc[:,['word_start','word_end','word_label']].drop_duplicates()
+    segment_indices = pd.Series([ value_in_which_interval(midpt, 
+        words_table['word_start'].astype(float), 
+        words_table['word_end'].astype(float)) for midpt in
+        df['segment_original_midpoint'] ], index=df.index).dropna()
+    matching_words = words_table.iloc[segment_indices,:].set_index(segment_indices.index)
+    logging.debug(df.shape)
+    logging.debug(matching_words.shape)
+    
+    df = pd.concat([df, matching_words], 1)
+    return df
+     
+def add_transcript_data_to_acoustic(df,transcript_path):
+    transcript_start_col = 2
+    transcript_end_col = 3
+    transcript_text_col = 4
+
+    logging.info("Getting data from transcript")
+    try:
+
+        transcript_table = pd.read_table(transcript_path, header=None, 
+            names=['speaker','speaker','line_start','line_end','line_label'])
+        trs_start = transcript_table.iloc[:,transcript_start_col]
+        trs_end = transcript_table.iloc[:,transcript_end_col]
+        trs_indices = pd.Series([ value_in_which_interval(midpt, trs_start, trs_end)
+            for midpt in df['segment_original_midpoint'] ], 
+            index=df.index).dropna()
+    
+        logging.debug("{} matching lines from transcript".format(len(trs_indices)))
+        logging.debug("{} rows, {} columns in transcript table".format(
+            transcript_table.shape[0],transcript_table.shape[1]))
+        matching_lines = transcript_table.iloc[trs_indices, 
+                [transcript_start_col, transcript_end_col, 
+                transcript_text_col]].set_index(trs_indices.index)
+        df = pd.concat([df, matching_lines], axis=1)
+    except IOError:
+        logging.debug("Unable to retrieve transcript data", exc_info=True)
+    return df
+
 def case_pipeline(unique_id, audio_path, alignments_path, video_path=None, 
                   transcript_path=None, creak_results_path=None,
                   do_creak=True, do_cv=True, do_acoustic=True):
@@ -191,7 +254,7 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
             try:
                 cv_results = do_cv_annotation(video_path)
                 results_dict['cv'] = cv_results
-                pd.DataFrame(cv_results, columns=['time','movamp','smile']).to_csv(
+                pd.DataFrame(zip(*cv_results), columns=['time','movamp','smile']).to_csv(
                     cv_table_path, sep='\t')
             except KeyboardInterrupt:
                 raise
@@ -227,6 +290,7 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         other_metadata = other_metadata.set_index('chunk_id')
         acous_df = acous_df.pivot(index='chunk_id', columns='Measure', values='Value')
         
+        
         acous_df = pd.merge(acous_df, other_metadata,left_index=True,right_index=True)
 
         # add in original timestamp, based on Filename field (possibly fragile--beware)
@@ -260,56 +324,10 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         # add observation metadata
         # two sources of data: alignments (get word label + start/end) and transcript 
         # (get utterance label + start/end)
-
-        # get data from alignment
-        logging.info("Getting data from alignments table")
-        # phones and words
-        alignments_table = pd.DataFrame(textgrid_table.get_table_from_tg(
-                alignments_path, 1, other_tiers=[2], 
-                utilities_path=os.path.join(script_dir, "praat_utilities")), 
-            columns=['segment_label', 'segment_start', 'segment_end', 
-                     'word_label', 'word_start', 'word_end'])
-
-        alignments_table['segment_start'] = alignments_table['segment_start'].astype(float)
-        alignments_table['segment_end'] = alignments_table['segment_end'].astype(float)
-        alignments_table['segment_midpoint'] = alignments_table['segment_start'] + \
-            (alignments_table['segment_end'] - alignments_table['segment_start']) / 2
-        # this method checks where segment midpoints fall, may be slow
-        words_table = alignments_table.loc[:,['word_start','word_end','word_label']].drop_duplicates()
-        segment_indices = pd.Series([ value_in_which_interval(midpt, 
-            words_table['word_start'].astype(float), 
-            words_table['word_end'].astype(float)) for midpt in
-            acous_df['segment_original_midpoint'] ], index=acous_df.index).dropna()
-        matching_words = words_table.iloc[segment_indices,:].set_index(segment_indices.index)
-        logging.debug(acous_df.shape)
-        logging.debug(matching_words.shape)
-        acous_df = pd.concat([acous_df, matching_words], 1)
-    
+        acous_df = add_alignments_to_acoustic(acous_df,alignments_path)
         # get data from transcript, also uses midpoint checking
-        logging.info("Getting data from transcript")
-        try:
-            transcript_start_col = 2
-            transcript_end_col = 3
-            transcript_text_col = 4
-            transcript_table = pd.read_table(transcript_path, header=None, 
-                names=['speaker','speaker','line_start','line_end','line_label'])
-            trs_start = transcript_table.iloc[:,transcript_start_col]
-            trs_end = transcript_table.iloc[:,transcript_end_col]
-            trs_indices = pd.Series([ value_in_which_interval(midpt, trs_start, trs_end)
-                for midpt in acous_df['segment_original_midpoint'] ], 
-                index=acous_df.index).dropna()
-        
-            logging.debug("{} matching lines from transcript".format(len(trs_indices)))
-            logging.debug(trs_indices[200:205])
-            logging.debug("{} rows, {} columns in transcript table".format(
-                transcript_table.shape[0],transcript_table.shape[1]))
-            matching_lines = transcript_table.iloc[trs_indices, 
-                    [transcript_start_col, transcript_end_col, 
-                    transcript_text_col]].set_index(trs_indices.index)
-            acous_df = pd.concat([acous_df, matching_lines], axis=1)
-        except IOError:
-            logging.debug("Unable to retrieve transcript data", exc_info=True)
-        
+        acous_df = add_transcript_data_to_acoustic(acous_df,transcript_path)
+                
         # save a copy in the temporary directory
         acous_df.to_csv(working_table_path, sep="\t")
         logging.debug("Saved a copy of this case's results to {}".format(
