@@ -13,6 +13,8 @@ import distutils.dir_util
 import shutil
 import time
 
+script_root = "/Users/BigBrother/Dropbox/Patrick_BigBrother/livingroom/scripts"
+
 def do_acoustic_annotation(audio_path, alignments_path, 
                            working_wav_dir=".tmpwav"):
     """1. split up audio according to alignments in alignments_path
@@ -44,7 +46,7 @@ def do_acoustic_annotation(audio_path, alignments_path,
 def split_audio(audio_path, alignments_path, destination_dir):
     phone_tier = 1
     output = subprocess.check_output( \
-        ["praat", "utilities/split_wav_file.praat", "\"{}\" \"{}\" \"{}\" 1 1 1 {} 0 1 0.025 _ _".format(
+        ["praat", os.path.join(script_root, "utilities/split_wav_file.praat"), "\"{}\" \"{}\" \"{}\" 1 1 1 {} 0 1 0.025 _ _".format(
             os.path.abspath(audio_path), 
             os.path.abspath(alignments_path), 
             os.path.abspath(destination_dir), 
@@ -79,5 +81,5 @@ def invoke_praat_voice_analysis(audio_directory):
     logging.info("Analysis arguments: " + praat_args)
     
     output = subprocess.check_output( \
-        ["praat", "utilities/praat_voice_measures.praat", praat_args])
+        ["praat", os.path.join(script_root,"utilities/praat_voice_measures.praat"), praat_args])
     return output

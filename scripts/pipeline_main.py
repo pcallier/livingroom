@@ -46,6 +46,7 @@ livingroom_root = "/Volumes/data_drive/corpora/living_room/data/"
 creak_tmp_dir = "/Volumes/Surfer/users/pcallier/livingroom/creak_results"
 # location of this script
 script_dir = os.path.abspath(os.path.dirname(__file__))
+acous.script_root = script_dir
 # temporary repository (not in Dropbox) of working files
 pipeline_tmp_root = "/Users/BigBrother/Documents/pipeline_working"
 # temporary repository of unjoined results for each case
@@ -256,7 +257,7 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
                 cv_results = do_cv_annotation(video_path)
                 results_dict['cv'] = cv_results
                 pd.DataFrame(zip(*cv_results), columns=['time','movamp','smile']).to_csv(
-                    cv_table_path, sep='\t')
+                    cv_table_path, sep='\t', index=False)
             except KeyboardInterrupt:
                 raise
             except:
