@@ -251,14 +251,14 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         logging.info("Doing computer vision")
         cv_table_path = os.path.join(working_dir(), unique_id + "_cv.tsv")
         try:
-            cv_results = zip(*pd.read_table(cv_table_path, sep='\t').values.tolist())
+            cv_results = pd.read_table(cv_table_path, sep='\t')
             results_dict['cv'] = cv_results
         except IOError:
             try:
                 cv_results = do_cv_annotation(video_path)
+                cv_results = pd.DataFrame(zip(*cv_results), columns=['time','movamp','smile'])
                 results_dict['cv'] = cv_results
-                pd.DataFrame(zip(*cv_results), columns=['time','movamp','smile']).to_csv(
-                    cv_table_path, sep='\t', index=False)
+                cv_results.to_csv(cv_table_path, sep='\t', index=False)
             except KeyboardInterrupt:
                 raise
             except:
@@ -307,9 +307,9 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         try:
             # interpolate values of movamp and smile according to time
             acous_df['movamp_interp'] = np.interp(acous_df['chunk_original_timestamp'], 
-                                                  cv_results[0], cv_results[1])
+                                                  cv_results.time, cv_results.movamp)
             acous_df['smiles_interp'] = np.interp(acous_df['chunk_original_timestamp'], 
-                                                  cv_results[0], cv_results[2]) > 0.5
+                                                  cv_results.time, cv_results.smile) > 0.5
         except NameError:
             logging.warning("No computer vision annotation information added", exc_info=True)
 
