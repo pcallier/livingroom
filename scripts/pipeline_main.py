@@ -47,6 +47,7 @@ creak_tmp_dir = "/Volumes/Surfer/users/pcallier/livingroom/creak_results"
 # location of this script
 script_dir = os.path.abspath(os.path.dirname(__file__))
 acous.script_root = script_dir
+smiles_data_path = os.path.join(script_dir,'smiles_movamp')
 # temporary repository (not in Dropbox) of working files
 pipeline_tmp_root = "/Users/BigBrother/Documents/pipeline_working"
 # temporary repository of unjoined results for each case
@@ -67,7 +68,7 @@ def do_cv_annotation(video_path):
     """returns a list of tuples (time, movement amplitude z-score, smile score)
     from Rob Voigt's computer vision annotation script
     """
-    cv_results = do_smiles_movamp(os.path.realpath(video_path), 'smiles_movamp', face_file, smile_file)
+    cv_results = do_smiles_movamp(os.path.realpath(video_path), smiles_data_path, face_file, smile_file)
     return cv_results
 
 def add_metadata_from_path(df, metadata_path, df_keys, metadata_keys):
@@ -305,7 +306,6 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         # CV results
         try:
             # interpolate values of movamp and smile according to time
-            acous_df = acous_df.sort('chunk_original_timestamp')
             acous_df['movamp_interp'] = np.interp(acous_df['chunk_original_timestamp'], 
                                                   cv_results[0], cv_results[1])
             acous_df['smiles_interp'] = np.interp(acous_df['chunk_original_timestamp'], 
