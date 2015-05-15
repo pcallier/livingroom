@@ -4,11 +4,19 @@
 Patrick Callier
 04/2015
 
-Main entry point for the analysis pipeline. Has options to select corpus type (Living Room
-dyads vs or Voices of California), set the path to praat (defaults to a BSD/Linux-
-compatible local fallback, which should be in this folder), choose which speakers to analyze,
-and of course set the path to audio recordings, alignment 
-TextGrids, video recordings (optional), and metadata table (also optional, I think?)
+Main entry point for the analysis pipeline. main() will run on BigBrother using some 
+reasonable defaults, and does measurements of acoustics and visuals for the Living Room
+corpus. To tweak, peruse the globals below, which specify what filenames should look like,
+where results and working files should be stored, etc. You can call directory_pipeline
+to run the pipeline on a directory of files, or case_pipeline to run it on individual
+cases. 
+
+A 'case' is a unique combination of participant ID and session ID, as specified in 
+unique_id_pattern below and used in unique_id_to_data_path. If you want to change which
+corpus the pipeline works on, you will probably need to write a different implementation of
+unique_id_to_data_path, which is the central means for mapping case IDs to the data files,
+and possibly also get_cases_from_directory, which translates filenames in a directory 
+into valid case IDs.
 
 Depends: pandas, numpy, scipy.signal. A compatible praat should be placed in the scripts/
 directory
@@ -128,7 +136,6 @@ def add_offsets(df,audio_dir):
     offset_df = pd.concat([spkr_df,inter_df], axis=0, ignore_index=True)
     df = df.merge(offset_df, on='speaker_id')
     df['chunk_timestamp_with_offset'] = df['chunk_original_timestamp'] + df['offset']
-    
     return df
 
 def add_alignments_to_acoustic(df,alignments_path):

@@ -19,6 +19,7 @@ Don't change any of the names that are already set in these files, especially no
 - ParticipantTwoID [sessioninfoheadings]
 - ParticipantTwoFirstName [sessioninfoheadings]
 - ParticipantTwoLastName [sessioninfoheadings]
+
 The names appear in the order in which Qualtrics currently exports them. If you change 
 the surveys at all, you may have to change the order of the headings appropriately, or 
 add/remove them.
