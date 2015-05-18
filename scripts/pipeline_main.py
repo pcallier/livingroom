@@ -62,6 +62,8 @@ pipeline_tmp_root = "/Users/BigBrother/Documents/pipeline_working"
 tmp_results_dir = os.path.join(pipeline_tmp_root, ".working")
 # temporary repository of wavs and textgrids--regularly deleted and rewritten!
 tmp_wav_dir = os.path.join(pipeline_tmp_root, ".tmpwav")
+# filename decorators
+cv_decorator = "_cv"
 
 
 def do_creak_detection(creak_results_path):
@@ -107,6 +109,9 @@ def working_dir():
     if not os.path.isdir(tmp_path):
         distutils.dir_util.mkpath(tmp_path)
     return tmp_path
+
+def get_unique_id(session_id, speaker_id):
+    return "INT{0:03d}_{1:03d}".format(session_id, speaker_id)
             
 def add_offsets(df,audio_dir):
     """Takes a df where speaker_session_id, session_id, and interlocutor_id and 
@@ -132,7 +137,7 @@ def add_offsets(df,audio_dir):
         sess_df.loc[:, ['spkr_audio','interlocutor_audio']].values ]
     # adjusted timestamps: spkr_time = orig + offset, inter_time = orig + 0
     spkr_df = sess_df[['speaker_id','offset_secs']]
-    inter_df = sess_df[['interlocutor_id']]
+    inter_df = sess_df[['interlocutor_id','offset_secs']]
     inter_df.columns = ['speaker_id']
     inter_df.loc[:, 'offset_secs'] = 0
     offset_df = pd.concat([spkr_df,inter_df], axis=0, ignore_index=True)
@@ -203,6 +208,26 @@ def add_transcript_data_to_acoustic(df,transcript_path):
     except IOError:
         logging.debug("Unable to retrieve transcript data", exc_info=True)
     return df
+    
+def add_interlocutor_cv_data(df):
+    """ Given a df with cols session_id and interlocutor_id, retrieve/interpolate
+    computer vision data for interlocutor at every unique chunk_original_timestamp """
+    #interlocutors_df = df.loc[['session_id','interlocutor_id']].drop_duplicates()
+    intrlocutor_grps = df.groupby(['session_id','interlocutor_id'], as_index=False)
+    for (session_id, interlocutor_id), df_row in intrlocutor_grps:
+    
+    def interp_cv(x):
+        cv_table_path = os.path.join(tmp_results_dir, 
+            get_unique_id(x.ix[0,'session_id'], x.ix[0,'interlocutor_id']) + 
+            cv_decorator + ".tsv")
+        cv_df = pd.read_table(cv_table_path, sep="\t")
+        x['interlocutor_movamp']
+        
+        
+        
+            
+        
+    
 
 def case_pipeline(unique_id, audio_path, alignments_path, video_path=None, 
                   transcript_path=None, creak_results_path=None,
@@ -258,7 +283,7 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
             logging.error("Creak detection failed", exc_info=True)
     if do_cv:
         logging.info("Doing computer vision")
-        cv_table_path = os.path.join(working_dir(), unique_id + "_cv.tsv")
+        cv_table_path = os.path.join(working_dir(), unique_id + cv_decorator + ".tsv")
         try:
             cv_results = pd.read_table(cv_table_path, sep='\t')
             results_dict['cv'] = cv_results
