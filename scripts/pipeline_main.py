@@ -29,8 +29,8 @@ import os
 import re
 import StringIO
 import logging
-logging.basicConfig(level=logging.DEBUG)
-logging.root.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+logging.root.setLevel(logging.INFO)
 import distutils.dir_util
 
 
@@ -115,27 +115,29 @@ def add_offsets(df,audio_dir):
     the relevant audio files"""
     spkr_sess_df = df.loc[:,['speaker_session_id','session_id','speaker_id',
                              'interlocutor_id']].drop_duplicates()
-    spkr_sess_df['spkr_audio'], spkr_sess_df['interlocutor_audio'] = [ 
-        (unique_id_to_audio_path(spkr_sess_id,audio_dir), 
-         unique_id_to_audio_path("INT{sess_id}_{spkr_id}".format(sess_id, interlocutor_id),
-                                 audio_dir)) for spkr_sess_id, sess_id, interlocutor_id in
-                                    spkr_sess_df[:,['speaker_session_id','session_id',
-                                    'interlocutor_id']].values ]
+    id_nos_df = spkr_sess_df.loc[:,['speaker_session_id','session_id',
+                                    'interlocutor_id']]
+    logging.debug(id_nos_df.values)
+    spkr_sess_df['spkr_audio'], spkr_sess_df['interlocutor_audio'] = zip(*[ 
+        (unique_id_to_audio_path(id_row['speaker_session_id'],audio_dir), 
+         unique_id_to_audio_path("INT{0}_{1}".format(id_row['session_id'], 
+                                 id_row['interlocutor_id']), audio_dir)) 
+        for index, id_row in id_nos_df.iterrows() ])
     # reduce spkr_sess_df to a df with 1 row per session, with one speaker chosen as 
     # the reference point for each session
     sess_groups = spkr_sess_df.groupby('session_id')
     sess_df = spkr_sess_df.loc[[ session_group[0] for session_group in sess_groups.groups.itervalues() ], :]
     # get audio offsets: amount of time that inter_wav starts after spkr_wav
     sess_df['offset_secs'] = [ get_offset_wav(spkr_wav, inter_wav) for spkr_wav, inter_wav in
-        sess_df[:, ['spkr_audio','interlocutor_audio']].values ]
+        sess_df.loc[:, ['spkr_audio','interlocutor_audio']].values ]
     # adjusted timestamps: spkr_time = orig + offset, inter_time = orig + 0
-    spkr_df = sess_df[['speaker_id','offset']]
+    spkr_df = sess_df[['speaker_id','offset_secs']]
     inter_df = sess_df[['interlocutor_id']]
-    inter_df.columns[0] = 'speaker_id'
-    inter_df['offset_secs'] = 0
+    inter_df.columns = ['speaker_id']
+    inter_df.loc[:, 'offset_secs'] = 0
     offset_df = pd.concat([spkr_df,inter_df], axis=0, ignore_index=True)
     df = df.merge(offset_df, on='speaker_id')
-    df['chunk_timestamp_with_offset'] = df['chunk_original_timestamp'] + df['offset']
+    df.loc[:, 'chunk_timestamp_with_offset'] = df['chunk_original_timestamp'] + df['offset_secs']
     return df
 
 def add_alignments_to_acoustic(df,alignments_path):
@@ -450,6 +452,7 @@ def main():
     # measurements
     results = directory_pipeline()
     # metadata
+    logging.info("Adding survey and session metadata")
     results = adorn_with_session_info(results,
         ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
         "Living_Room_Participant_Survey.csv"),
@@ -460,11 +463,14 @@ def main():
         ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
         "livingroom/scripts/utilities/sessioninfoheadings.txt"))
     # get better timestamps
-    results = add_offsets(results)
+    logging.info("Getting audio offsets")
+    results = add_offsets(results, os.path.join(livingroom_root, "audio"))
+    
+    # calculate some derived columns for interlocutor activity
     
     return results   
 
 
 if __name__ == '__main__':
     results = main()
-    print results
+    print results.to_csv(sep="\t", index=False, encoding='utf-8')

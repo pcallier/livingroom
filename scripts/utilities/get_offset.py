@@ -46,6 +46,6 @@ def get_offset_wav(wav_filename1, wav_filename2, time_limit=120):
         data2 = data1[0:rate2 * time_limit]
                 
     offset_samples = get_offset_xcorr(data1, data2)
-    offset_seconds = offset_samples / float(rate)
+    offset_seconds = offset_samples / float(rate1)
     
     return offset_seconds
