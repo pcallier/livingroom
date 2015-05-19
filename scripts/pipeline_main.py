@@ -513,6 +513,8 @@ def main():
     results = add_offsets(results, os.path.join(livingroom_root, "audio"))
     
     # calculate some derived columns for interlocutor activity
+    logging.info("Getting interlocutor CV information")
+    results = add_interlocutor_cv_data
     
     return results   
 
