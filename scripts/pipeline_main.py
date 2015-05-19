@@ -18,6 +18,11 @@ unique_id_to_data_path, which is the central means for mapping case IDs to the d
 and possibly also get_cases_from_directory, which translates filenames in a directory 
 into valid case IDs.
 
+Directory_pipeline also attempts to merge measurements with metadata from exit surveys,
+session information, alignments, and transcripts. This allows the interlocutors to be 
+identified, and this in turn allows the time offset between pairs of recordings to 
+be calculated, allowing for time-synchronized analysis of both speakers in an interaction.
+
 Depends: pandas, numpy, scipy.signal. A compatible praat should be placed in the scripts/
 directory
 
@@ -117,7 +122,13 @@ def add_offsets(df,audio_dir):
     """Takes a df where speaker_session_id, session_id, and interlocutor_id and 
     chunk_original_timestamp are defined, and adds columns offset_secs and 
     chunk_timestamp_with_offset, using the automatically detected offset between 
-    the relevant audio files"""
+    the relevant audio files.
+    
+    offset_secs yields, across interlocutors, a single comparable timecourse, by
+    selecting one of the speakers as the reference point (with offset_secs=0). 
+    offset_to_interlocutor_native is the offset from the speaker's native timescale to 
+    their interlocutor's timescale. For any pair of interlocutors a and b, 
+    offset_to_native_a = -offset_to_native_b"""
     spkr_sess_df = df.loc[:,['speaker_session_id','session_id','speaker_id',
                              'interlocutor_id']].drop_duplicates()
     id_nos_df = spkr_sess_df.loc[:,['speaker_session_id','session_id',
@@ -137,9 +148,12 @@ def add_offsets(df,audio_dir):
         sess_df.loc[:, ['spkr_audio','interlocutor_audio']].values ]
     # adjusted timestamps: spkr_time = orig + offset, inter_time = orig + 0
     spkr_df = sess_df[['speaker_id','offset_secs']]
+    spkr_df.loc[:,'offset_to_interlocutor_native'] = spkr_df.offset_secs
     inter_df = sess_df[['interlocutor_id','offset_secs']]
-    inter_df.columns = ['speaker_id']
+    inter_df.columns = ['speaker_id','offset_secs']
+    inter_df.loc[:,'offset_to_interlocutor_native'] = -inter_df.offset_secs
     inter_df.loc[:, 'offset_secs'] = 0
+    
     offset_df = pd.concat([spkr_df,inter_df], axis=0, ignore_index=True)
     df = df.merge(offset_df, on='speaker_id')
     df.loc[:, 'chunk_timestamp_with_offset'] = df['chunk_original_timestamp'] + df['offset_secs']
@@ -211,22 +225,29 @@ def add_transcript_data_to_acoustic(df,transcript_path):
     
 def add_interlocutor_cv_data(df):
     """ Given a df with cols session_id and interlocutor_id, retrieve/interpolate
-    computer vision data for interlocutor at every unique chunk_original_timestamp """
+    computer vision data for interlocutor at every unique chunk_original_timestamp,
+    adjusting for offset_to_interlocutor_native """
     #interlocutors_df = df.loc[['session_id','interlocutor_id']].drop_duplicates()
-    intrlocutor_grps = df.groupby(['session_id','interlocutor_id'], as_index=False)
-    for (session_id, interlocutor_id), df_row in intrlocutor_grps:
+    interlocutor_grps = df.groupby(['session_id','interlocutor_id'], as_index=False)
+    #for (session_id, interlocutor_id), df_row in intrlocutor_grps:
     
     def interp_cv(x):
         cv_table_path = os.path.join(tmp_results_dir, 
             get_unique_id(x.ix[0,'session_id'], x.ix[0,'interlocutor_id']) + 
             cv_decorator + ".tsv")
         cv_df = pd.read_table(cv_table_path, sep="\t")
-        x['interlocutor_movamp']
+        translated_time = x['chunk_original_timestamp'] + \
+                            x['offset_to_interlocutor_native']
+        x['interlocutor_movamp'] = pd.Series(
+            np.interp(translated_time, cv_df['time'], cv_df['movamp']), 
+            index=x.index)
+        x['interlocutor_smile'] = pd.Series(
+            np.interp(translated_time, cv_df['time'], cv_df['smile']) > 0.5, 
+            index=x.index)
+        return x[['interlocutor_movamp','interlocutor_smile']]
         
-        
-        
-            
-        
+    df = pd.concat([df, interlocutor_grps.transform(interp_cv)], axis=1)
+    return df
     
 
 def case_pipeline(unique_id, audio_path, alignments_path, video_path=None, 
