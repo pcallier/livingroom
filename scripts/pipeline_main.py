@@ -514,7 +514,7 @@ def main():
     
     # calculate some derived columns for interlocutor activity
     logging.info("Getting interlocutor CV information")
-    results = add_interlocutor_cv_data
+    results = add_interlocutor_cv_data(results)
     
     return results   
 
