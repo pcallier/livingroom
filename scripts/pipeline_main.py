@@ -145,15 +145,14 @@ def add_unit_ids(df):
     try:
         df['word_id'] = "{}_{}_{}".format(nonalphanum_re.sub("", df['word_label']),
                                           np.floor(df['word_start'] * 1000),
-                                          df['speaker_session_id])
+                                          df['speaker_session_id'])
     except KeyError:
         logging.warning("Could not set word id; columns missing", exc_info=True)
         
     # line id
     try:
-        df['word_id'] = "{}_{}_{}".format(nonalphanum_re.sub("", df['word_label']),
-                                          np.floor(df['word_start'] * 1000),
-                                          df['speaker_session_id])
+        df['line_id'] = "{}_{}".format(np.floor(df['line_start'] * 1000),
+                                          df['speaker_session_id'])
     except KeyError:
         logging.warning("Could not set word id; columns missing", exc_info=True)
         
@@ -518,44 +517,23 @@ def directory_pipeline(video_path=livingroom_root + "video",
     return results
      
 
-def stump_main():
-    """Testing only, do not run"""
-    # measurements
-    results = directory_pipeline(video_path="../../data/stump/video",
-        audio_path="../../data/stump/audio",
-        alignments_path="../../data/stump/annotations")
-    # metadata
-    results = adorn_with_session_info(results,
-        ("/Users/patrickcallier/Dropbox/ongoing/postdoc/"
-        "livingroom/data/stump/Living_Room_Participant_Survey.csv"),
-        ("/Users/patrickcallier/Dropbox/ongoing/postdoc/"
-        "livingroom/livingroom/scripts/utilities/qualtricsheadings.txt"),
-        ("/Users/patrickcallier/Dropbox/ongoing/postdoc/"
-        "livingroom/data/stump/Session_Information_Post.csv"),
-        ("/Users/patrickcallier/Dropbox/ongoing/postdoc/"
-        "livingroom/livingroom/scripts/utilities/sessioninfoheadings.txt"))
-    # getting better timestamps
-    results = add_offsets(results)
-    
-    return results.to_csv(None, sep="\t", encoding="utf-8")
-
-
-def main():
+def main(exit_survey_path=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+            "Living_Room_Participant_Survey.csv"),
+         exit_survey_headings=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+            "livingroom/scripts/utilities/qualtricsheadings.txt"),
+         session_info_path=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+            "Session_Information_Post.csv"),
+         session_info_headings=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+            "livingroom/scripts/utilities/sessioninfoheadings.txt")):
     # measurements
     results = directory_pipeline()
     # add ids for hierarchical units
-    results = add_unit_ids(results)    
+    results = add_unit_ids(results)
     # metadata
     logging.info("Adding survey and session metadata")
     results = adorn_with_session_info(results,
-        ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
-        "Living_Room_Participant_Survey.csv"),
-        ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
-        "livingroom/scripts/utilities/qualtricsheadings.txt"),
-        ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
-        "Session_Information_Post.csv"),
-        ("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
-        "livingroom/scripts/utilities/sessioninfoheadings.txt"))
+        exit_survey_path, exit_survey_headings,
+        session_info_path, session_info_headings)
     # get better timestamps
     logging.info("Getting audio offsets")
     results = add_offsets(results, os.path.join(livingroom_root, "audio"))
