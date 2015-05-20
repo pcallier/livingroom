@@ -52,6 +52,7 @@ from utilities.get_offset import get_offset_wav
 livingroom_pattern_template = r"^(\d{8})_SESSION_USER([MF]?)_(FAM|STR)_(CHA|SOF)"
 livingroom_filename_pattern = r"^(\d{8})_(INT\d{3})_(\d{3})([MF]?)_(FAM|STR)_(CHA|SOF).(wav|mov|eaf)$"
 unique_id_pattern = r"^(INT\d{3})_(\d{3})$"
+nonalphanum_re = re.compile(r"[^A-Za-z0-9]")
 # paths--shifty!
 # root of corpus, should contain video, audio, annotations folders
 livingroom_root = "/Volumes/data_drive/corpora/living_room/data/"
@@ -108,7 +109,6 @@ def value_in_which_interval(value, lower, upper, return_all=False):
         except IndexError:
             return None
 
-
 def working_dir():
     tmp_path = os.path.realpath(tmp_results_dir)
     if not os.path.isdir(tmp_path):
@@ -117,6 +117,48 @@ def working_dir():
 
 def get_unique_id(session_id, speaker_id):
     return "INT{0:03d}_{1:03d}".format(session_id, speaker_id)
+    
+def add_unit_ids(df):
+    """Takes df and tries to make columns chunk_id, segment_id, word_id, line_id
+    which have unique values for every unique chunk, segment, word and line respectively.
+    Requires that df have columns speaker_session_id, chunk_original_timestamp,
+    `Segment label`, `Segment start`, word_start, word_label, and line_start.
+    
+    Returns modified df"""
+    
+    # chunk_id
+    try:
+        df['chunk_id'] = "{}_{}".format(np.floor(df['chunk_original_timestamp'] * 1000),
+                                        df['speaker_session_id'])
+    except KeyError:
+        logging.warning("Could not set chunk id; columns missing", exc_info=True)
+    
+    # segment id
+    try:
+        df['segment_id'] = "{}_{}_{}".format(df['Segment label'],
+                                             np.floor(df['Segment start'] * 1000),
+                                             df['speaker_session_id'])
+    except KeyError:
+        logging.warning("Could not set segment id; columns missing", exc_info=True)
+        
+    # word id
+    try:
+        df['word_id'] = "{}_{}_{}".format(nonalphanum_re.sub("", df['word_label']),
+                                          np.floor(df['word_start'] * 1000),
+                                          df['speaker_session_id])
+    except KeyError:
+        logging.warning("Could not set word id; columns missing", exc_info=True)
+        
+    # line id
+    try:
+        df['word_id'] = "{}_{}_{}".format(nonalphanum_re.sub("", df['word_label']),
+                                          np.floor(df['word_start'] * 1000),
+                                          df['speaker_session_id])
+    except KeyError:
+        logging.warning("Could not set word id; columns missing", exc_info=True)
+        
+    return df        
+        
             
 def add_offsets(df,audio_dir):
     """Takes a df where speaker_session_id, session_id, and interlocutor_id and 
@@ -501,6 +543,8 @@ def stump_main():
 def main():
     # measurements
     results = directory_pipeline()
+    # add ids for hierarchical units
+    results = add_unit_ids(results)    
     # metadata
     logging.info("Adding survey and session metadata")
     results = adorn_with_session_info(results,
