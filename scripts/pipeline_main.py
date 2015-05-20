@@ -34,8 +34,8 @@ import os
 import re
 import StringIO
 import logging
-logging.basicConfig(level=logging.INFO)
-logging.root.setLevel(logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+logging.root.setLevel(logging.DEBUG)
 import distutils.dir_util
 
 
@@ -141,21 +141,23 @@ def add_offsets(df,audio_dir):
         for index, id_row in id_nos_df.iterrows() ])
     # reduce spkr_sess_df to a df with 1 row per session, with one speaker chosen as 
     # the reference point for each session
-    sess_groups = spkr_sess_df.groupby('session_id')
+    sess_groups = spkr_sess_df.groupby('session_id', as_index=False)
     sess_df = spkr_sess_df.loc[[ session_group[0] for session_group in sess_groups.groups.itervalues() ], :]
     # get audio offsets: amount of time that inter_wav starts after spkr_wav
     sess_df['offset_secs'] = [ get_offset_wav(spkr_wav, inter_wav) for spkr_wav, inter_wav in
         sess_df.loc[:, ['spkr_audio','interlocutor_audio']].values ]
     # adjusted timestamps: spkr_time = orig + offset, inter_time = orig + 0
-    spkr_df = sess_df[['speaker_id','offset_secs']]
+    spkr_df = sess_df[['session_id','speaker_id','offset_secs']]
     spkr_df.loc[:,'offset_to_interlocutor_native'] = spkr_df.offset_secs
-    inter_df = sess_df[['interlocutor_id','offset_secs']]
-    inter_df.columns = ['speaker_id','offset_secs']
+    inter_df = sess_df[['session_id','interlocutor_id','offset_secs']]
+    inter_df.columns = ['session_id','speaker_id','offset_secs']
     inter_df.loc[:,'offset_to_interlocutor_native'] = -inter_df.offset_secs
     inter_df.loc[:, 'offset_secs'] = 0
     
     offset_df = pd.concat([spkr_df,inter_df], axis=0, ignore_index=True)
-    df = df.merge(offset_df, on='speaker_id')
+    logging.debug("df before: {}".format("session_id" in df.columns))
+    df = df.merge(offset_df, on=['session_id','speaker_id'])
+    logging.debug("df after: {}".format("session_id" in df.columns))
     df.loc[:, 'chunk_timestamp_with_offset'] = df['chunk_original_timestamp'] + df['offset_secs']
     return df
 
@@ -227,13 +229,15 @@ def add_interlocutor_cv_data(df):
     """ Given a df with cols session_id and interlocutor_id, retrieve/interpolate
     computer vision data for interlocutor at every unique chunk_original_timestamp,
     adjusting for offset_to_interlocutor_native """
-    #interlocutors_df = df.loc[['session_id','interlocutor_id']].drop_duplicates()
     interlocutor_grps = df.groupby(['session_id','interlocutor_id'], as_index=False)
-    #for (session_id, interlocutor_id), df_row in intrlocutor_grps:
     
     def interp_cv(x):
+        logging.debug("Type: {}".format(type(x)))
+        logging.debug("Columns: session_id={}, interlocutor_id={}".format(
+            'session_id' in x.columns, 'interlocutor_id' in x.columns))
         cv_table_path = os.path.join(tmp_results_dir, 
-            get_unique_id(x.ix[0,'session_id'], x.ix[0,'interlocutor_id']) + 
+            get_unique_id(long(x['session_id'].iloc[0]), 
+                          long(x['interlocutor_id'].iloc[0])) + 
             cv_decorator + ".tsv")
         cv_df = pd.read_table(cv_table_path, sep="\t")
         translated_time = x['chunk_original_timestamp'] + \
@@ -246,7 +250,7 @@ def add_interlocutor_cv_data(df):
             index=x.index)
         return x[['interlocutor_movamp','interlocutor_smile']]
         
-    df = pd.concat([df, interlocutor_grps.transform(interp_cv)], axis=1)
+    df = pd.concat([df, interlocutor_grps.apply(interp_cv)], axis=1)
     return df
     
 
