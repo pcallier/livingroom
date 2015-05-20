@@ -24,7 +24,9 @@ identified, and this in turn allows the time offset between pairs of recordings 
 be calculated, allowing for time-synchronized analysis of both speakers in an interaction.
 
 Depends: pandas, numpy, scipy.signal. A compatible praat should be placed in the scripts/
-directory
+directory. Creak detection uses the Matlab-based covarep repository and the wrappers 
+written by Patrick Callier available at https://github.com/pcallier/creak_batch (runs 
+separately). 
 
 Output: one table, with acoustic measurements, unique speaker/session IDs, and whatever 
 metadata are available"""

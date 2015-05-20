@@ -24,3 +24,7 @@ The names appear in the order in which Qualtrics currently exports them. If you 
 the surveys at all, you may have to change the order of the headings appropriately, or 
 add/remove them.
 
+Depends: python 2.7.x, pandas 0.16.1, numpy 1.9.1+, scipy.signal. A compatible praat 
+should be placed in the scripts/ directory. Creak detection uses the Matlab-based covarep 
+repository and the wrappers written by Patrick Callier available at 
+https://github.com/pcallier/creak_batch (runs separately). 
