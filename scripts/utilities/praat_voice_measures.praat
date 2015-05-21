@@ -107,8 +107,8 @@ for ifile to numberOfFiles
 	sound = selected("Sound")
 	# exceptionally long sounds are usually mistakes and can clog up the works, skip them
 	dur = Get total duration
-	#min_length
-	if dur < max_length
+	min_length = 3/min_f0range
+	if dur < max_length and dur > min_length
 		# set maximum frequency of Formant calculation algorithm 
 		maxf = max_formant
         f1ref = right_F1_reference
