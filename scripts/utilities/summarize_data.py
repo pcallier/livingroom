@@ -94,5 +94,7 @@ def summarize_pipeline(df, grouping_col='segment_id', measure_cols=measure_cols,
         
 if __name__ == '__main__':
     table_path = sys.argv[1]
-    df = pd.read_table(table_path)
+    dtypes = dict(zip(measure_cols, ['float'] * len(measure_cols)) + 
+                  zip(binary_cols, ['bool'] * len(binary_cols)))
+    df = pd.read_table(table_path, sep='\t', dtype=dtypes,low_memory=False)
     print summarize_pipeline(df).to_csv(sep='\t',index=False, encoding='utf-8')
