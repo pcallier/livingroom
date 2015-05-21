@@ -45,7 +45,7 @@ import numpy as np
 #import scipy.io as sp_io
 import pandas as pd
 import acoustic_analysis_livingroom as acous
-import utilities.summarize_data as summarize_data
+
 from smiles_movamp.get_smiles import do_smiles_movamp, face_file, smile_file
 from praat_utilities import textgrid_table
 from utilities.prepare_metadata import prepare_qualtrics, adorn_with_session_info

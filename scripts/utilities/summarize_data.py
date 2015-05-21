@@ -1,11 +1,12 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ summarize_data.py 
 Patrick Callier
 
 Utility suite/script for getting a useful summary of pipeline output for analysis.
 Will do a number of reductions and summaries, including:
 - one measurement per segment
-- maybe some outlier detection? 
+- maybe some outlier detection?
 """
 
 import sys
