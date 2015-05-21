@@ -59,7 +59,7 @@ nonalphanum_re = re.compile(r"[^A-Za-z0-9]")
 # root of corpus, should contain video, audio, annotations folders
 livingroom_root = "/Volumes/data_drive/corpora/living_room/data/"
 # repository of creak detection results
-creak_tmp_dir = "/Volumes/Surfer/users/pcallier/livingroom/creak_results"
+creak_tmp_dir = "/Users/BigBrother/Documents/pipeline_working/creak_results"
 # location of this script
 script_dir = os.path.abspath(os.path.dirname(__file__))
 acous.script_root = script_dir
@@ -282,7 +282,13 @@ def add_interlocutor_cv_data(df):
             get_unique_id(long(x['session_id'].iloc[0]), 
                           long(x['interlocutor_id'].iloc[0])) + 
             cv_decorator + ".tsv")
-        cv_df = pd.read_table(cv_table_path, sep="\t")
+        try:
+            cv_df = pd.read_table(cv_table_path, sep="\t")
+        except:
+            logging.warning("Interlocutor CV data not found for {}".format(
+                x['speaker_session_id'].iloc[0]))
+            return pd.DataFrame({'interlocutor_movamp': [np.nan] * x.shape[0],
+                                 'interlocutor_smile':  [np.nan] * x.shape[0]})
         translated_time = x['chunk_original_timestamp'] + \
                             x['offset_to_interlocutor_native']
         x['interlocutor_movamp'] = pd.Series(
