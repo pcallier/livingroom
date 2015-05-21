@@ -58,8 +58,9 @@ unique_id_pattern = r"^(INT\d{3})_(\d{3})$"
 nonalphanum_re = re.compile(r"[^A-Za-z0-9]")
 # paths--shifty!
 # root of corpus, should contain video, audio, annotations folders
-livingroom_root = "/Volumes/data_drive/corpora/living_room/data/"
-# repository of creak detection results
+livingroom_root = "/Volumes/Surfer/corpora/living_room/data/"
+# repository of creak detection results 
+# (linked to VirtualBox's shared folders, change with caution!)
 creak_tmp_dir = "/Users/BigBrother/Documents/pipeline_working/creak_results"
 # location of this script
 script_dir = os.path.abspath(os.path.dirname(__file__))
@@ -157,7 +158,7 @@ def add_unit_ids(df):
         df['line_id'] = "{}_{}".format(np.floor(df['line_start'] * 1000),
                                           df['speaker_session_id'])
     except KeyError:
-        logging.warning("Could not set word id; columns missing", exc_info=True)
+        logging.warning("Could not set line id; columns missing", exc_info=True)
         
     return df        
         
