@@ -58,7 +58,7 @@ unique_id_pattern = r"^(INT\d{3})_(\d{3})$"
 nonalphanum_re = re.compile(r"[^A-Za-z0-9]")
 # paths--shifty!
 # root of corpus, should contain video, audio, annotations folders
-livingroom_root = "/Volumes/Surfer/corpora/living_room/data/"
+livingroom_root = "/Volumes/data_drive/corpora/living_room/data/"
 # repository of creak detection results 
 # (linked to VirtualBox's shared folders, change with caution!)
 creak_tmp_dir = "/Users/BigBrother/Documents/pipeline_working/creak_results"
@@ -537,7 +537,9 @@ def main(exit_survey_path=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
             "livingroom/scripts/utilities/sessioninfoheadings.txt")):
     # measurements
     results = directory_pipeline()
+    logging.info("Measurements gathered")
     # add ids for hierarchical units
+    logging.info("Adding IDs for prosodic units")
     results = add_unit_ids(results)
     # metadata
     logging.info("Adding survey and session metadata")
