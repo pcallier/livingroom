@@ -24,7 +24,7 @@ def get_offset_xcorr(wav1, wav2):
     xcorr = np.hstack((xcorr[:wav1.size], xcorr[n_samples - wav2.size + 1:]))
     return np.argmax(xcorr)
 
-def get_offset_wav(wav_filename1, wav_filename2, time_limit=120):
+def get_offset_wav(wav_filename1, wav_filename2, time_limit=300):
     """Return offset in seconds between wav_filename1 and
     wav_filename2, which are recordings of the same event
     with potentially different starting times. Returns the 

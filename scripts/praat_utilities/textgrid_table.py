@@ -27,4 +27,15 @@ utilities_path = "praat_utilities/"):
             ' '.join(map(str, other_tiers))])
     
     return list(map(lambda x: x.split('\t'), tg_table.split('\n')))
+
+def get_neighbors_tg_tier(textgrid_path, target_tier, praat_path = "praat", 
+                          utilities_path="praat_utilities/"):
+    """Get left and right neighbors for each interval of target_tier in the TextGrid
+    in textgrid_path, return as list of tuples (label, start, end, prev, next)"""
     
+    
+    tg_table = subprocess.check_output([praat_path, 
+        os.path.join(utilities_path, "textgrid_table_neighbors.praat"), 
+        os.path.abspath(textgrid_path) + ' ' + str(target_tier)])
+    
+    return list(map(lambda x: x.split('\t'), tg_table.split('\n')))

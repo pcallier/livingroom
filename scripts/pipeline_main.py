@@ -46,7 +46,7 @@ import pandas as pd
 import acoustic_analysis_livingroom as acous
 
 from smiles_movamp.get_smiles import do_smiles_movamp, face_file, smile_file
-from praat_utilities import textgrid_table
+from praat_utilities import textgrid_table, get_neighbors_tg_tier
 from utilities.prepare_metadata import prepare_qualtrics, adorn_with_session_info
 from utilities.get_offset import get_offset_wav
 
@@ -144,7 +144,7 @@ def add_unit_ids(df):
     try:
         df['segment_id'] = df.apply(lambda x: "{}_{:.0f}_{}".format(
                                 x['Segment label'],
-                                np.floor(x['segment_original_timestamp'] * 1000),
+                                np.floor(x['segment_original_start'] * 1000),
                                 x['speaker_session_id']), axis=1)
     except KeyError:
         logging.warning("Could not set segment id; columns missing", exc_info=True)
@@ -236,6 +236,8 @@ def add_alignments_to_acoustic(df,alignments_path):
     alignments_table['segment_end'] = alignments_table['segment_end'].astype(float)
     alignments_table['segment_midpoint'] = alignments_table['segment_start'] + \
         (alignments_table['segment_end'] - alignments_table['segment_start']) / 2
+    
+    # below, match segment midpoints with intervals for words
     # this method checks where segment midpoints fall, may be slow
     words_table = alignments_table.loc[:,['word_start','word_end','word_label']].drop_duplicates()
     segment_indices = pd.Series([ value_in_which_interval(midpt, 
@@ -309,6 +311,36 @@ def add_interlocutor_cv_data(df):
         
     df = pd.concat([df, interlocutor_grps.apply(interp_cv)], axis=1)
     return df
+    
+def add_phonological_context(df, alignments_dir=livingroom_root + "annotations"):
+    """df has columns segment_original_midpoint, speaker_session_id. Split df on
+    speaker_session_id, and determine the preceding and following context (phone label)
+    for each unique value of segment_original_midpoint, by finding it in the table
+    of intervals returned for that case by 
+    praat_utilities.textgrid_table.get_neighbors_tg_tier"""
+    
+    def add_context(x):
+        # get phonological context from alignments
+        tg_path = unique_id_to_alignments_path(x['speaker_session_id'].iloc[0], 
+                                               alignments_dir)
+        phone_tier = 1
+        contexts_table = pd.DataFrame(get_neighbors_tg_tier(
+            tg_path, phone_tier, utilities_dir = os.path.join(script_dir, "utilities")),
+            columns=['label', 'start', 'end', 'prev', 'next'])
+        # match midpoints to intervals in contexts_table, to find neighbors
+        midpoints = x['segment_original_midpoint'].drop_duplicates()
+        matching_environments_indexes = points_to_interval_indexes(midpoints,
+                                                           contexts_table['start'],
+                                                           contexts_table['end'])
+        matching_environments = pd.DataFrame({'segment_original_midpoint': midpoints,
+            'preceding_context': contexts_table.iloc[matching_environments].loc[:,['prev']],
+            'following_context': contexts_table.iloc[matching_environments].loc[:,['next']]})
+        
+        result = df.merge(matching_environments, on='segment_original_midpont')
+    
+    df = df.groupby('speaker_session_id').apply(add_context)
+    return df
+    
     
 
 def case_pipeline(unique_id, audio_path, alignments_path, video_path=None, 
@@ -409,14 +441,24 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         other_metadata = other_metadata.set_index('chunk_id')
         acous_df = acous_df.pivot(index='chunk_id', columns='Measure', values='Value')
         
-        
         acous_df = pd.merge(acous_df, other_metadata,left_index=True,right_index=True)
 
         # add in original timestamp, based on Filename field (possibly fragile--beware)
-        acous_df['segment_original_timestamp'] = acous_df['Filename'].map(lambda x: re.sub(r"^.*_([0-9]+).*?$", r"\1", x)).map(float) / 1000 + acous_df['Segment start']
-        acous_df['segment_original_end'] = acous_df['segment_original_timestamp'] + (acous_df['Segment end'] - acous_df['Segment start'])
-        acous_df['segment_original_midpoint'] = acous_df['segment_original_timestamp'] + (acous_df['Segment end'] - acous_df['Segment start']) / 2
-        acous_df['chunk_original_timestamp'] = acous_df['segment_original_timestamp'] + acous_df['Window_start']
+        acous_df['segment_start_padded'] = acous_df['Filename'].map(lambda x: re.sub(r"^.*_([0-9]+).*?$", r"\1", x)).map(float)
+        acous_df['segment_original_start'] = acous_df['segment_start_padded'] / 1000 + acous_df['Segment start']
+        acous_df['segment_original_end'] = acous_df['segment_original_start'] + (acous_df['Segment end'] - acous_df['Segment start'])
+        acous_df['segment_original_midpoint'] = acous_df['segment_original_start'] + (acous_df['Segment end'] - acous_df['Segment start']) / 2
+        acous_df['chunk_original_timestamp'] = acous_df['segment_original_start'] + acous_df['Window_start']
+        
+        # rename Segment start and del Segment end, b/c confusing
+        acous_df['segment_duration'] = acous_df['Segment end'] - acous_df['Segment start']
+        acous_df['analysis_padding'] = acous_df['Segment start']
+        del acous_df['Segment start']
+        del acous_df['Segment end']
+        
+        # get following, preceding environments
+        acous_df['speaker_session_id'] = unique_id
+        acous_df = add_phonological_context(acous_df, os.path.basename(alignments_path))
         
         # combine acoustics with cv, metadata if necessary/possible
         # CV results
@@ -524,9 +566,8 @@ def directory_pipeline(video_path=livingroom_root + "video",
         do_creak=True, do_cv=True, do_acoustic=True)) for case_id in case_list ])
     
     # add unique identifier and split into speaker and session ID fields as well
-    results = pd.concat([ pd.concat([pd.Series(key, index=df.index, 
-        name="speaker_session_id"), pd.DataFrame(df)], axis=1)
-        for key, df in results_by_case.iteritems() if df is not None ], axis=0)
+    results = pd.concat([ pd.DataFrame(df) for key, df in results_by_case.iteritems() 
+                        if df is not None ], axis=0)
     results['session_id'], results['speaker_id'] = zip(
         *map(lambda x: x.strip('INT').split('_'), results['speaker_session_id']))
 
