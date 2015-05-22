@@ -132,31 +132,37 @@ def add_unit_ids(df):
     
     # chunk_id
     try:
-        df['chunk_id'] = "{}_{}".format(np.floor(df['chunk_original_timestamp'] * 1000),
-                                        df['speaker_session_id'])
+        df['chunk_id'] = df.apply(lambda x: "{0:.0f}_{}".format(
+                                    np.floor(x['chunk_original_timestamp'] * 1000),
+                                    x['speaker_session_id']), axis=1)
+        
+        
     except KeyError:
         logging.warning("Could not set chunk id; columns missing", exc_info=True)
     
     # segment id
     try:
-        df['segment_id'] = "{}_{}_{}".format(df['Segment label'],
-                                             np.floor(df['Segment start'] * 1000),
-                                             df['speaker_session_id'])
+        df['segment_id'] = df.apply(lambda x: "{}_{:.0f}_{}".format(
+                                x['Segment label'],
+                                np.floor(x['segment_original_timestamp'] * 1000),
+                                x['speaker_session_id']), axis=1)
     except KeyError:
         logging.warning("Could not set segment id; columns missing", exc_info=True)
         
     # word id
     try:
-        df['word_id'] = "{}_{}_{}".format(nonalphanum_re.sub("", df['word_label']),
-                                          np.floor(df['word_start'] * 1000),
-                                          df['speaker_session_id'])
+        df['word_id'] = df.apply(lambda x: "{}_{:.0f}_{}".format(
+                nonalphanum_re.sub("", x['word_label']),
+                np.floor(x['word_start'] * 1000),
+                x['speaker_session_id']), axis=1)
     except KeyError:
         logging.warning("Could not set word id; columns missing", exc_info=True)
         
     # line id
     try:
-        df['line_id'] = "{}_{}".format(np.floor(df['line_start'] * 1000),
-                                          df['speaker_session_id'])
+        df['line_id'] = df.apply(lambda x: "{:.0f}_{}".format(
+                                np.floor(x['line_start'] * 1000),
+                                x['speaker_session_id']), axis=1)
     except KeyError:
         logging.warning("Could not set line id; columns missing", exc_info=True)
         
@@ -200,9 +206,9 @@ def add_offsets(df,audio_dir):
     inter_df.loc[:, 'offset_secs'] = 0
     
     offset_df = pd.concat([spkr_df,inter_df], axis=0, ignore_index=True)
-    logging.debug("df before: {}".format("session_id" in df.columns))
+    #logging.debug("df before: {}".format("session_id" in df.columns))
     df = df.merge(offset_df, on=['session_id','speaker_id'])
-    logging.debug("df after: {}".format("session_id" in df.columns))
+    #logging.debug("df after: {}".format("session_id" in df.columns))
     df.loc[:, 'chunk_timestamp_with_offset'] = df['chunk_original_timestamp'] + df['offset_secs']
     return df
 
@@ -277,18 +283,18 @@ def add_interlocutor_cv_data(df):
     interlocutor_grps = df.groupby(['session_id','interlocutor_id'], as_index=False)
     
     def interp_cv(x):
-        logging.debug("Type: {}".format(type(x)))
-        logging.debug("Columns: session_id={}, interlocutor_id={}".format(
-            'session_id' in x.columns, 'interlocutor_id' in x.columns))
+        #logging.debug("Type: {}".format(type(x)))
+        #logging.debug("Columns: session_id={}, interlocutor_id={}".format(
+        #    'session_id' in x.columns, 'interlocutor_id' in x.columns))
         cv_table_path = os.path.join(tmp_results_dir, 
             get_unique_id(long(x['session_id'].iloc[0]), 
                           long(x['interlocutor_id'].iloc[0])) + 
             cv_decorator + ".tsv")
         try:
             cv_df = pd.read_table(cv_table_path, sep="\t")
-        except:
+        except IOError:
             logging.warning("Interlocutor CV data not found for {}".format(
-                x['speaker_session_id'].iloc[0]))
+                x['speaker_session_id'].iloc[0]), exc_info=True)
             return pd.DataFrame({'interlocutor_movamp': [np.nan] * x.shape[0],
                                  'interlocutor_smile':  [np.nan] * x.shape[0]})
         translated_time = x['chunk_original_timestamp'] + \

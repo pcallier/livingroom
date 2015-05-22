@@ -85,12 +85,12 @@ def summarize_pipeline(df, grouping_col='segment_id', measure_cols=measure_cols,
     the_rest = df[[col for col in df.columns if col not in measure_cols + binary_cols]]
     
     measures_medians = measures_df.groupby(grouping_col).apply(
-        lambda x: pd.Series.median(x, skipna=True))
-    binary_40 = binary_df.groupby('segment_id').apply(
-        lambda x: pd.Series.mean(x, skipna=True) > 0.4)
-    the_rest = the_rest.groupby('segment_id').nth(0)
+        lambda x: x.median(skipna=True))
+    binary_40 = binary_df.groupby(grouping_col).apply(
+        lambda x: x.mean(skipna=True) > 0.4)
+    the_rest = the_rest.groupby(grouping_col).apply(lambda x: x.iloc[0,:])
     
-    return pd.concat([the_rest, measures_medians, binary_40]).reset_index(level=0)
+    return pd.concat([the_rest, measures_medians, binary_40], axis=1)
         
 if __name__ == '__main__':
     table_path = sys.argv[1]

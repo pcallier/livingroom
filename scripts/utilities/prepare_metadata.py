@@ -61,7 +61,7 @@ def adorn_with_session_info(df, exit_survey_path, exit_survey_header_path,
             pd.isnull(exit_survey[['SessionID', 'ParticipantID']])==False,
             exit_survey_alternates[['SessionID', 'ParticipantID']])
     logging.debug(exit_survey['SessionID'].values)
-    
+    logging.debug("Session IDs: {}".format(session_info['SessionID'].values))
     
     # main loop for adding metadata, iterates over unique speaker/session pairs
     # The idea is to build up a one-row data frame with all the metadata for each 
@@ -76,7 +76,7 @@ def adorn_with_session_info(df, exit_survey_path, exit_survey_header_path,
         speaker_session_df['session_id'] = [speaker_session['session_id']]
         speaker_session_df['speaker_id'] = speaker_session['speaker_id']
         
-        logging.debug("Session IDs: {}".format(session_info['SessionID'].values))
+        
         logging.debug("Session ID: {}".format(speaker_session_df['session_id'].values))
         current_session_info = session_info[session_info['SessionID'].values == 
                                             speaker_session_df['session_id'].values]
