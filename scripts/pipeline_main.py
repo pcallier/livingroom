@@ -458,7 +458,7 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         
         # get following, preceding environments
         acous_df['speaker_session_id'] = unique_id
-        acous_df = add_phonological_context(acous_df, os.path.basename(alignments_path))
+        acous_df = add_phonological_context(acous_df, os.path.dirname(alignments_path))
         
         # combine acoustics with cv, metadata if necessary/possible
         # CV results
