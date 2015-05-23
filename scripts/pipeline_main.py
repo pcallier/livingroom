@@ -60,7 +60,7 @@ nonalphanum_re = re.compile(r"[^A-Za-z0-9]")
 # root of corpus, should contain video, audio, annotations folders
 livingroom_root = "/Volumes/data_drive/corpora/living_room/data/"
 # repository of creak detection results 
-# (linked to VirtualBox's shared folders, change with caution!)
+# (linked to VirtualBox's shared folders, change those if you change this!)
 creak_tmp_dir = "/Users/BigBrother/Documents/pipeline_working/creak_results"
 # location of this script
 script_dir = os.path.abspath(os.path.dirname(__file__))
@@ -228,7 +228,7 @@ def add_alignments_to_acoustic(df,alignments_path):
     # phones and words
     alignments_table = pd.DataFrame(textgrid_table.get_table_from_tg(
             alignments_path, phone_tier, other_tiers=[word_tier], 
-            utilities_path=os.path.join(script_dir, "praat_utilities")), 
+            utilities_dir=os.path.join(script_dir, "praat_utilities")), 
         columns=['segment_label', 'segment_start', 'segment_end', 
                  'word_label', 'word_start', 'word_end'])
 
@@ -547,15 +547,10 @@ def unique_id_to_transcript_path(unique_id, data_dir=livingroom_root + "annotati
     return unique_id_to_data_path(unique_id, data_dir=data_dir, data_filename_pattern=
                                   livingroom_pattern_template + ".(txt)$")
 
-
-def directory_pipeline(video_path=livingroom_root + "video", 
+def cases_pipeline(case_list, video_path=livingroom_root + "video", 
                        audio_path=livingroom_root + "audio", 
-                       alignments_path=livingroom_root + "annotations",
-                       exclude_cases=[]):
-    """ Run pipeline on a whole directory"""
-    
-    case_list = [ case for case in get_cases_from_directory(video_path) if case not in
-                    exclude_cases ]
+                       alignments_path=livingroom_root + "annotations"):
+
     results_by_case = dict([ (case_id, case_pipeline(case_id, 
         unique_id_to_audio_path(case_id, audio_path), 
         unique_id_to_alignments_path(case_id,alignments_path),
@@ -572,6 +567,17 @@ def directory_pipeline(video_path=livingroom_root + "video",
         *map(lambda x: x.strip('INT').split('_'), results['speaker_session_id']))
 
     return results
+
+def directory_pipeline(video_path=livingroom_root + "video", 
+                       audio_path=livingroom_root + "audio", 
+                       alignments_path=livingroom_root + "annotations",
+                       exclude_cases=[]):
+    """ Run pipeline on a whole directory, specified in video_path"""
+    
+    case_list = [ case for case in get_cases_from_directory(video_path) if case not in
+                    exclude_cases ]
+                    
+    return cases_pipeline(case_list)
      
 
 def main(exit_survey_path=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
