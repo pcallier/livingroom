@@ -46,7 +46,7 @@ import pandas as pd
 import acoustic_analysis_livingroom as acous
 
 from smiles_movamp.get_smiles import do_smiles_movamp, face_file, smile_file
-from praat_utilities import textgrid_table, get_neighbors_tg_tier
+from praat_utilities import textgrid_table
 from utilities.prepare_metadata import prepare_qualtrics, adorn_with_session_info
 from utilities.get_offset import get_offset_wav
 
@@ -324,7 +324,7 @@ def add_phonological_context(df, alignments_dir=livingroom_root + "annotations")
         tg_path = unique_id_to_alignments_path(x['speaker_session_id'].iloc[0], 
                                                alignments_dir)
         phone_tier = 1
-        contexts_table = pd.DataFrame(get_neighbors_tg_tier(
+        contexts_table = pd.DataFrame(textgrid_table.get_neighbors_tg_tier(
             tg_path, phone_tier, utilities_dir = os.path.join(script_dir, "utilities")),
             columns=['label', 'start', 'end', 'prev', 'next'])
         # match midpoints to intervals in contexts_table, to find neighbors
