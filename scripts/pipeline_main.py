@@ -74,6 +74,7 @@ tmp_results_dir = os.path.join(pipeline_tmp_root, ".working")
 tmp_wav_dir = os.path.join(pipeline_tmp_root, ".tmpwav")
 # filename decorators
 cv_decorator = "_cv"
+acoustic_decorator = "_acoustic"
 
 
 def do_creak_detection(creak_results_path):
@@ -103,13 +104,23 @@ def points_to_interval_indexes(points, lower, upper):
     
 
 def value_in_which_interval(value, lower, upper, return_all=False):
-    upper = pd.Series(upper)
-    lower = pd.Series(lower)
+    upper = pd.Series(upper, dtype=np.float64)
+    lower = pd.Series(lower, dtype=np.float64)
+    value = float(value)
+#     logging.debug("Trying to find: {}, type {}".format(value, type(value)))
+#     logging.debug("Head greater/less:\n{}".format(pd.DataFrame({
+#                 'low': [low < value for low in lower.values],
+#                 'lowval': lower.values,
+#                 'high': (upper.values > value),
+#                 'highval': upper.values,
+#                 'c': value }).head()))
+    results = list(np.where(pd.concat([lower < value, upper > value], axis=1).all(1))[0])
+#    logging.debug("All matches null: {}".format(all([r is None or r is np.nan for r in results])))
     if return_all:
-        return list(np.where(pd.concat([lower < value, upper > value], axis=1).all(1))[0])
+        return results
     else:
         try:
-            return list(np.where(pd.concat([lower < value, upper > value], axis=1).all(1))[0])[0]
+            return results[0]
         except IndexError:
             return None
 
@@ -132,7 +143,7 @@ def add_unit_ids(df):
     
     # chunk_id
     try:
-        df['chunk_id'] = df.apply(lambda x: "{0:.0f}_{}".format(
+        df['chunk_id'] = df.apply(lambda x: "{:.0f}_{}".format(
                                     np.floor(x['chunk_original_timestamp'] * 1000),
                                     x['speaker_session_id']), axis=1)
         
@@ -324,21 +335,28 @@ def add_phonological_context(df, alignments_dir=livingroom_root + "annotations")
         tg_path = unique_id_to_alignments_path(x['speaker_session_id'].iloc[0], 
                                                alignments_dir)
         phone_tier = 1
-        contexts_table = pd.DataFrame(textgrid_table.get_neighbors_tg_tier(
-            tg_path, phone_tier, utilities_dir = os.path.join(script_dir, "utilities")),
-            columns=['label', 'start', 'end', 'prev', 'next'])
-        # match midpoints to intervals in contexts_table, to find neighbors
-        midpoints = x['segment_original_midpoint'].drop_duplicates()
-        matching_environments_indexes = points_to_interval_indexes(midpoints,
-                                                           contexts_table['start'],
-                                                           contexts_table['end'])
-        matching_environments = pd.DataFrame({'segment_original_midpoint': midpoints,
-            'preceding_context': contexts_table.iloc[matching_environments].loc[:,['prev']],
-            'following_context': contexts_table.iloc[matching_environments].loc[:,['next']]})
         
-        result = df.merge(matching_environments, on='segment_original_midpont')
+        unique_segments = x[['Filename','segment_original_midpoint']].drop_duplicates()
+        environments = pd.DataFrame([ textgrid_table.get_neighbors_from_midpoint(tg_path, midpt,
+            phone_tier, utilities_dir=os.path.join(script_dir, "praat_utilities")) for 
+            segment_filename, midpt in unique_segments.values ],
+            columns=['preceding_context','following_context'], index=unique_segments.index)
+        environments = pd.concat([environments, unique_segments],axis=1)
+        #logging.debug(environments.columns)
+        
+#        logging.debug("Before {}".format(x.shape))
+        result = x.merge(environments[['Filename','preceding_context','following_context']], on='Filename', how='inner')
+        logging.debug(x.columns.values)
+#        logging.debug("After {}".format(result.shape))
+        assert 'Filename' in result.columns
+        
+        return result
     
-    df = df.groupby('speaker_session_id').apply(add_context)
+    df_grps = df.groupby('speaker_session_id')
+    if len(df_grps) > 1:
+        df = df_grps.apply(add_context)
+    else:
+        df = add_context(df)
     return df
     
     
@@ -419,22 +437,33 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
     if do_acoustic:
         logging.info("Doing acoustic annotation")
         try:
-            acous_df = pd.read_table(StringIO.StringIO(
-                acous.do_acoustic_annotation(audio_path, alignments_path, 
-                                             working_wav_dir=tmp_wav_dir)), 
-                na_values="--undefined--")
-        except TypeError:
-            logging.error(("Could not do acoustic annotation, "
-                             "possibly because alignments missing"), exc_info=True)
-            return None
-        except AttributeError:
-            logging.error(("Could not do acoustic annotation, "
-                             "possibly because alignments missing"), exc_info=True)
-            return None
+            # use saved results if possible
+            acoustic_results_path = os.path.join(working_dir(), unique_id + 
+                                                 acoustic_decorator + ".tsv")
+            acous_df = pd.read_table(acoustic_results_path,sep="\t")
+            logging.info("Using saved measurements")
+        except IOError:
+            try:
+                logging.info("Making acoustic measurements")
+                acous_df = pd.read_table(StringIO.StringIO(
+                    acous.do_acoustic_annotation(audio_path, alignments_path, 
+                                                 working_wav_dir=tmp_wav_dir)), 
+                    na_values="--undefined--")
+            except TypeError:
+                logging.error(("Could not do acoustic annotation, "
+                                 "possibly because alignments missing"), exc_info=True)
+                return None
+            except AttributeError:
+                logging.error(("Could not do acoustic annotation, "
+                                 "possibly because alignments missing"), exc_info=True)
+                return None
         
-        logging.info("Acoustic analysis complete...")
+            acous_df.to_csv(acoustic_results_path, sep="\t")
+
+        logging.info("Acoustic measurements retrieved")
 
         # convert from (hybrid) long to wide
+        logging.info("Reshaping data")
         acous_df['chunk_id'] = acous_df['Filename'] +  acous_df['Chunk'].map(str)
         other_metadata = acous_df.loc[:,['chunk_id', 'Filename', 'Segment label', 'Segment start', 
             'Segment end', 'Chunk', 'Window_start', 'Window_end']].drop_duplicates()
@@ -444,6 +473,7 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         acous_df = pd.merge(acous_df, other_metadata,left_index=True,right_index=True)
 
         # add in original timestamp, based on Filename field (possibly fragile--beware)
+        logging.info("Calculating timestamps")
         acous_df['segment_start_padded'] = acous_df['Filename'].map(lambda x: re.sub(r"^.*_([0-9]+).*?$", r"\1", x)).map(float)
         acous_df['segment_original_start'] = acous_df['segment_start_padded'] / 1000 + acous_df['Segment start']
         acous_df['segment_original_end'] = acous_df['segment_original_start'] + (acous_df['Segment end'] - acous_df['Segment start'])
@@ -457,10 +487,13 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         del acous_df['Segment end']
         
         # get following, preceding environments
+        logging.info("Retrieving phonological environments")
         acous_df['speaker_session_id'] = unique_id
         acous_df = add_phonological_context(acous_df, os.path.dirname(alignments_path))
         
         # combine acoustics with cv, metadata if necessary/possible
+        logging.info("Combining with metadata")
+        logging.debug(acous_df.shape)
         # CV results
         try:
             # interpolate values of movamp and smile according to time
@@ -473,6 +506,7 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
 
         # Creak results: translate intervals from detector into boolean values at each 
         # timepoint
+        logging.debug(acous_df.shape)
         try:
             acous_df = acous_df.sort('chunk_original_timestamp')
             acous_df['creak_binary'] = [ interval is not None for interval in 
@@ -485,8 +519,10 @@ def case_pipeline(unique_id, audio_path, alignments_path, video_path=None,
         # two sources of data: alignments (get word label + start/end) and transcript 
         # (get utterance label + start/end)
         acous_df = add_alignments_to_acoustic(acous_df,alignments_path)
+        logging.debug(acous_df.shape)
         # get data from transcript, also uses midpoint checking
         acous_df = add_transcript_data_to_acoustic(acous_df,transcript_path)
+        logging.debug(acous_df.shape)
                 
         # save a copy in the temporary directory
         acous_df.to_csv(working_table_path, sep="\t")
@@ -577,7 +613,7 @@ def directory_pipeline(video_path=livingroom_root + "video",
     case_list = [ case for case in get_cases_from_directory(video_path) if case not in
                     exclude_cases ]
                     
-    return cases_pipeline(case_list)
+    return cases_pipeline(case_list, video_path, audio_path, alignments_path)
      
 
 def main(exit_survey_path=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"

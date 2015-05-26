@@ -39,3 +39,18 @@ def get_neighbors_tg_tier(textgrid_path, target_tier, praat_path = "praat",
         os.path.abspath(textgrid_path) + ' ' + str(target_tier)])
     
     return list(map(lambda x: x.split('\t'), tg_table.split('\n')))
+    
+def get_neighbors_from_midpoint(textgrid_path, target_midpoint, target_tier, praat_path = "praat", 
+                          utilities_dir="praat_utilities/"):
+    """Get left and right neighbors for interval at midpoint in target_tier in the TextGrid
+    in textgrid_path, return as list (prev, next)"""
+    
+    
+    tg_table = subprocess.check_output([praat_path, 
+        os.path.join(utilities_dir, "tg_neighbors_from_midpoint.praat"), 
+        os.path.abspath(textgrid_path) + ' ' + 
+        str(target_tier) + ' ' + str(target_midpoint) ])
+    
+    results = tg_table.split('\t')
+
+    return results
