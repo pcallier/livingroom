@@ -22,9 +22,13 @@ Don't change any of the names that are already set in these files, especially no
 
 The names appear in the order in which Qualtrics currently exports them. If you change 
 the surveys at all, you may have to change the order of the headings appropriately, or 
-add/remove them.
+add/remove them. 
+
+**By default, pipeline_main.py will look for qualtricsheadings.txt and sessioninfoheadings.txt**
+**in the pipeline_working/metadata folder on Big Brother, so if you change these files, copy**
+**them to this location!**
 
 Depends: python 2.7.x, pandas 0.16.1, numpy 1.9.1+, scipy.signal. A compatible praat 
-should be placed in the scripts/ directory. Creak detection uses the Matlab-based covarep 
+should be on the path. Creak detection uses the Matlab-based covarep 
 repository and the wrappers written by Patrick Callier available at 
 https://github.com/pcallier/creak_batch (runs separately). 

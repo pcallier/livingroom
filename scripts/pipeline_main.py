@@ -616,14 +616,14 @@ def directory_pipeline(video_path=livingroom_root + "video",
     return cases_pipeline(case_list, video_path, audio_path, alignments_path)
      
 
-def main(exit_survey_path=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+def main(exit_survey_path=os.path.join(pipeline_tmp_root, "metadata",
             "Living_Room_Participant_Survey.csv"),
-         exit_survey_headings=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
-            "livingroom/scripts/utilities/qualtricsheadings.txt"),
-         session_info_path=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
+         exit_survey_headings=os.path.join(pipeline_tmp_root, "metadata",
+            "qualtricsheadings.txt"),
+         session_info_path=os.path.join(pipeline_tmp_root, "metadata",
             "Session_Information_Post.csv"),
-         session_info_headings=("/Users/BigBrother/Dropbox/Patrick_BigBrother/"
-            "livingroom/scripts/utilities/sessioninfoheadings.txt")):
+         session_info_headings=os.path.join(pipeline_tmp_root, "metadata",
+            "sessioninfoheadings.txt")):
     # measurements
     results = directory_pipeline()
     logging.info("Measurements gathered")
