@@ -5,8 +5,8 @@ of pitch, formants, and voice quality for data from the Living Room.
 scripts/pipeline_main.py contains the main functionality.
 
 If you change the Qualtrics-based exit survey or session info survey:
-scripts/utilities/qualtricsheadings.txt and
-scripts/utilities/sessioninfoheadings.txt
+scripts/utilities/data/qualtricsheadings.txt and
+scripts/utilities/data/sessioninfoheadings.txt
 have plain-English, R-compatible headings for the output of Qualtrics export. The 
 pipeline uses these comma-delimited, one-line files to set the headings of the metadata.
 Don't change any of the names that are already set in these files, especially not:
