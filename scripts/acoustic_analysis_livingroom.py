@@ -18,7 +18,7 @@ script_root = "/Users/BigBrother/Dropbox/Patrick_BigBrother/livingroom/scripts"
 def do_acoustic_annotation(audio_path, alignments_path, 
                            working_wav_dir=".tmpwav"):
     """1. split up audio according to alignments in alignments_path
-        2. invoke VoiceSauce or whatever
+        2. invoke Praat
     """
     
     # empty out and create tmp WAV folder (DANGER)
